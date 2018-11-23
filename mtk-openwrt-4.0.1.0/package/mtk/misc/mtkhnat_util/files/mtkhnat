@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+config_load mtkhnat
+config_get enable global enable 0
+
+[ "${enable}" -eq 1 ] || {
+	rmmod mtkhnat
+	exit 0
+}
+
+insmod mtkhnat
+

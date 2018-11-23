@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Modify flash name
+# Winbond
+FLASH_NAME=1Gb_2K_64
+
+# MX35LF2G14AC-Z4I
+#FLASH_NAME=2Gb_2K_64
+

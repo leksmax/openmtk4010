@@ -1,0 +1,30 @@
+Index: linux-4.4.83/arch/arm64/boot/dts/mediatek/mt7622-ac2600rfb1.dts
+===================================================================
+--- linux-4.4.83.orig/arch/arm64/boot/dts/mediatek/mt7622-ac2600rfb1.dts	2017-09-06 16:20:10.756614000 +0800
++++ linux-4.4.83/arch/arm64/boot/dts/mediatek/mt7622-ac2600rfb1.dts	2017-09-06 16:22:47.166606000 +0800
+@@ -21,8 +21,8 @@
+ 	compatible = "mediatek,mt7622-ac2600rfb1", "mediatek,mt7622";
+ 
+ 	chosen {
+-		bootargs = "console=ttyS0,115200n1 root=/dev/ram \
+-			initrd=0x44000000,0x615E36 loglevel=8 androidboot.hardware=mt7622 swiotlb=512";
++		bootargs = "console=ttyS0,115200n1 root=/dev/mtdblock7 \
++			initrd=0x44000000,0x615E36 loglevel=8 androidboot.hardware=mt7622 swiotlb=512 rootfstype=squashfs";
+ 	};
+ 
+ 	mmc_fixed_1v8_io: fixedregulator@0 {
+Index: linux-4.4.83/arch/arm64/boot/dts/mediatek/mt7622-ac4300rfb1.dts
+===================================================================
+--- linux-4.4.83.orig/arch/arm64/boot/dts/mediatek/mt7622-ac4300rfb1.dts	2017-09-06 16:20:10.759600000 +0800
++++ linux-4.4.83/arch/arm64/boot/dts/mediatek/mt7622-ac4300rfb1.dts	2017-09-06 16:26:23.728805000 +0800
+@@ -21,8 +21,8 @@
+ 	compatible = "mediatek,mt7622-ac4300rfb1", "mediatek,mt7622";
+ 
+ 	chosen {
+-		bootargs = "console=ttyS0,115200n1 root=/dev/ram \
+-			initrd=0x44000000,0x615E36 loglevel=8 androidboot.hardware=mt7622 swiotlb=512";
++		bootargs = "console=ttyS0,115200n1 root=/dev/mtdblock7 \
++			initrd=0x44000000,0x615E36 loglevel=8 androidboot.hardware=mt7622 swiotlb=512 rootfstype=squashfs";
+ 	};
+ 
+ 	mmc_fixed_1v8_io: fixedregulator@0 {

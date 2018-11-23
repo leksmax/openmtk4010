@@ -1,0 +1,106 @@
+#!/bin/sh /etc/rc.common
+
+CONTAINER_NAME=chrony
+IMG_TAG="default"
+ELAPS_TIME=5
+
+START=92
+STOP=52
+
+WAIT_TIME=30
+
+
+run_dockerd()
+{
+	pidof dockerd
+}
+
+
+depend()
+{
+	after dockerd
+}
+
+
+start()
+{
+	echo "$CONTAINER_NAME container auot-start at system boot"
+	con=""
+	Ver=""
+	loop=0
+	version=""
+	image_detect=0
+	container_detect=0
+	run_dockerd
+
+	while [[ $? -ne 0 || $loop -lt $ELAPS_TIME ]] && [[ $loop -lt $WAIT_TIME ]]; do
+		sleep 1
+		let "loop++"
+		echo "loop is $loop"
+		run_dockerd
+	done
+
+	if [[ $loop -lt $WAIT_TIME ]]; then
+		echo "dockerd is running. Now start $CONTAINER_NAME container"
+		# Check docker image
+		isRemoteRepo=`docker images | awk '$1 ~ /\/'$CONTAINER_NAME'/ {print $1}'`
+
+		if [[ -z "$isRemoteRepo" ]]; then
+			repo=""
+		else
+			repo=$(dirname "${isRemoteRepo}")
+			Ver=`docker images | awk '$1 ~ /\/'$CONTAINER_NAME'/ {print $2}'`
+		fi
+
+		tags=`docker images | awk '$1 ~ /'$CONTAINER_NAME'/ {print $2}'`
+		sorted_tags=$(echo "$tags"|tr " " "\n"|sort|tr "\n" " ")
+
+		for version in $sorted_tags; do
+			echo "$version"
+			let image_detect++
+		done
+
+		if [[ $image_detect -gt 1 ]]; then
+			version=`echo $sorted_tags | awk -v ver="$IMG_TAG" '{if($NF == ver) print $(NF-1)}'`
+		fi
+		echo "tags is $sorted_tags, image_detect is $image_detect, version is $version"
+
+		# Check docker container
+		container=`docker ps -a | awk '$NF ~ /'$CONTAINER_NAME'/ { print $NF }'`
+		sorted_container=$(echo "$container"|tr " " "\n"|sort|uniq|tr "\n" " ")
+
+		for con in $sorted_container; do
+			echo "$con"
+			let container_detect++
+		done
+		echo "container is $sorted_container, con is $con, container_detect is $container_detect"
+
+		if [[ $container_detect -lt 1 ]]; then
+			echo "Make $CONTAINER_NAME container image"
+			cd /root/makeContainer/$CONTAINER_NAME;./build-"$IMG_TAG".sh
+			sleep 1
+			run_$CONTAINER_NAME.sh $IMG_TAG
+			exit 0
+		else
+			echo "Container($CONTAINER_NAME) exist. Just $con start."
+			docker start $con
+			exit 0
+		fi
+	else
+		echo "dockerd is not running"
+		exit 1
+	fi
+}
+
+
+stop()
+{
+	container=`docker ps -a | awk '$NF ~ /'$CONTAINER_NAME'/ {print $NF}'`
+
+	for con in $container; do
+		echo "$con container stop"
+		#docker rm -f $con
+	done
+	exit 0
+}
+

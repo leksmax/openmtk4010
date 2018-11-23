@@ -1,0 +1,1637 @@
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/if-mib/ifXTable/ifXTable.c net-snmp-5.7.3.git/agent/mibgroup/if-mib/ifXTable/ifXTable.c
+--- net-snmp-5.7.3.orig/agent/mibgroup/if-mib/ifXTable/ifXTable.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/if-mib/ifXTable/ifXTable.c	2018-09-10 08:19:42.913240500 +0900
+@@ -722,7 +722,7 @@
+  */
+ int
+ ifHCInOctets_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                 U64 * ifHCInOctets_val_ptr)
++                 struct counter64 * ifHCInOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ifHCInOctets_val_ptr);
+@@ -779,7 +779,7 @@
+  */
+ int
+ ifHCInUcastPkts_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                    U64 * ifHCInUcastPkts_val_ptr)
++                    struct counter64 * ifHCInUcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ifHCInUcastPkts_val_ptr);
+@@ -838,7 +838,7 @@
+  */
+ int
+ ifHCInMulticastPkts_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                        U64 * ifHCInMulticastPkts_val_ptr)
++                        struct counter64 * ifHCInMulticastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ifHCInMulticastPkts_val_ptr);
+@@ -897,7 +897,7 @@
+  */
+ int
+ ifHCInBroadcastPkts_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                        U64 * ifHCInBroadcastPkts_val_ptr)
++                        struct counter64 * ifHCInBroadcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ifHCInBroadcastPkts_val_ptr);
+@@ -955,7 +955,7 @@
+  */
+ int
+ ifHCOutOctets_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                  U64 * ifHCOutOctets_val_ptr)
++                  struct counter64 * ifHCOutOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ifHCOutOctets_val_ptr);
+@@ -1013,7 +1013,7 @@
+  */
+ int
+ ifHCOutUcastPkts_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                     U64 * ifHCOutUcastPkts_val_ptr)
++                     struct counter64 * ifHCOutUcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ifHCOutUcastPkts_val_ptr);
+@@ -1074,7 +1074,7 @@
+  */
+ int
+ ifHCOutMulticastPkts_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                         U64 * ifHCOutMulticastPkts_val_ptr)
++                         struct counter64 * ifHCOutMulticastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ifHCOutMulticastPkts_val_ptr);
+@@ -1134,7 +1134,7 @@
+  */
+ int
+ ifHCOutBroadcastPkts_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                         U64 * ifHCOutBroadcastPkts_val_ptr)
++                         struct counter64 * ifHCOutBroadcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ifHCOutBroadcastPkts_val_ptr);
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/if-mib/ifXTable/ifXTable.h net-snmp-5.7.3.git/agent/mibgroup/if-mib/ifXTable/ifXTable.h
+--- net-snmp-5.7.3.orig/agent/mibgroup/if-mib/ifXTable/ifXTable.h	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/if-mib/ifXTable/ifXTable.h	2018-09-10 08:19:42.913240500 +0900
+@@ -143,28 +143,28 @@
+                                            u_long *
+                                            ifOutBroadcastPkts_val_ptr);
+     int             ifHCInOctets_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                                     U64 * ifHCInOctets_val_ptr);
++                                     struct counter64 * ifHCInOctets_val_ptr);
+     int             ifHCInUcastPkts_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                                        U64 * ifHCInUcastPkts_val_ptr);
++                                        struct counter64 * ifHCInUcastPkts_val_ptr);
+     int             ifHCInMulticastPkts_get(ifXTable_rowreq_ctx *
+                                             rowreq_ctx,
+-                                            U64 *
++                                            struct counter64 *
+                                             ifHCInMulticastPkts_val_ptr);
+     int             ifHCInBroadcastPkts_get(ifXTable_rowreq_ctx *
+                                             rowreq_ctx,
+-                                            U64 *
++                                            struct counter64 *
+                                             ifHCInBroadcastPkts_val_ptr);
+     int             ifHCOutOctets_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                                      U64 * ifHCOutOctets_val_ptr);
++                                      struct counter64 * ifHCOutOctets_val_ptr);
+     int             ifHCOutUcastPkts_get(ifXTable_rowreq_ctx * rowreq_ctx,
+-                                         U64 * ifHCOutUcastPkts_val_ptr);
++                                         struct counter64 * ifHCOutUcastPkts_val_ptr);
+     int             ifHCOutMulticastPkts_get(ifXTable_rowreq_ctx *
+                                              rowreq_ctx,
+-                                             U64 *
++                                             struct counter64 *
+                                              ifHCOutMulticastPkts_val_ptr);
+     int             ifHCOutBroadcastPkts_get(ifXTable_rowreq_ctx *
+                                              rowreq_ctx,
+-                                             U64 *
++                                             struct counter64 *
+                                              ifHCOutBroadcastPkts_val_ptr);
+     int             ifLinkUpDownTrapEnable_get(ifXTable_rowreq_ctx *
+                                                rowreq_ctx,
+@@ -284,86 +284,86 @@
+ 
+     int             ifHCInOctets_check_value(ifXTable_rowreq_ctx *
+                                              rowreq_ctx,
+-                                             U64 ifHCInOctets_val);
++                                             struct counter64 ifHCInOctets_val);
+     int             ifHCInOctets_undo_setup(ifXTable_rowreq_ctx *
+                                             rowreq_ctx);
+     int             ifHCInOctets_set(ifXTable_rowreq_ctx * rowreq_ctx,
+-                                     U64 ifHCInOctets_val);
++                                     struct counter64 ifHCInOctets_val);
+     int             ifHCInOctets_undo(ifXTable_rowreq_ctx * rowreq_ctx);
+ 
+     int             ifHCInUcastPkts_check_value(ifXTable_rowreq_ctx *
+                                                 rowreq_ctx,
+-                                                U64 ifHCInUcastPkts_val);
++                                                struct counter64 ifHCInUcastPkts_val);
+     int             ifHCInUcastPkts_undo_setup(ifXTable_rowreq_ctx *
+                                                rowreq_ctx);
+     int             ifHCInUcastPkts_set(ifXTable_rowreq_ctx * rowreq_ctx,
+-                                        U64 ifHCInUcastPkts_val);
++                                        struct counter64 ifHCInUcastPkts_val);
+     int             ifHCInUcastPkts_undo(ifXTable_rowreq_ctx * rowreq_ctx);
+ 
+     int             ifHCInMulticastPkts_check_value(ifXTable_rowreq_ctx *
+                                                     rowreq_ctx,
+-                                                    U64
++                                                    struct counter64
+                                                     ifHCInMulticastPkts_val);
+     int             ifHCInMulticastPkts_undo_setup(ifXTable_rowreq_ctx *
+                                                    rowreq_ctx);
+     int             ifHCInMulticastPkts_set(ifXTable_rowreq_ctx *
+                                             rowreq_ctx,
+-                                            U64 ifHCInMulticastPkts_val);
++                                            struct counter64 ifHCInMulticastPkts_val);
+     int             ifHCInMulticastPkts_undo(ifXTable_rowreq_ctx *
+                                              rowreq_ctx);
+ 
+     int             ifHCInBroadcastPkts_check_value(ifXTable_rowreq_ctx *
+                                                     rowreq_ctx,
+-                                                    U64
++                                                    struct counter64
+                                                     ifHCInBroadcastPkts_val);
+     int             ifHCInBroadcastPkts_undo_setup(ifXTable_rowreq_ctx *
+                                                    rowreq_ctx);
+     int             ifHCInBroadcastPkts_set(ifXTable_rowreq_ctx *
+                                             rowreq_ctx,
+-                                            U64 ifHCInBroadcastPkts_val);
++                                            struct counter64 ifHCInBroadcastPkts_val);
+     int             ifHCInBroadcastPkts_undo(ifXTable_rowreq_ctx *
+                                              rowreq_ctx);
+ 
+     int             ifHCOutOctets_check_value(ifXTable_rowreq_ctx *
+                                               rowreq_ctx,
+-                                              U64 ifHCOutOctets_val);
++                                              struct counter64 ifHCOutOctets_val);
+     int             ifHCOutOctets_undo_setup(ifXTable_rowreq_ctx *
+                                              rowreq_ctx);
+     int             ifHCOutOctets_set(ifXTable_rowreq_ctx * rowreq_ctx,
+-                                      U64 ifHCOutOctets_val);
++                                      struct counter64 ifHCOutOctets_val);
+     int             ifHCOutOctets_undo(ifXTable_rowreq_ctx * rowreq_ctx);
+ 
+     int             ifHCOutUcastPkts_check_value(ifXTable_rowreq_ctx *
+                                                  rowreq_ctx,
+-                                                 U64 ifHCOutUcastPkts_val);
++                                                 struct counter64 ifHCOutUcastPkts_val);
+     int             ifHCOutUcastPkts_undo_setup(ifXTable_rowreq_ctx *
+                                                 rowreq_ctx);
+     int             ifHCOutUcastPkts_set(ifXTable_rowreq_ctx * rowreq_ctx,
+-                                         U64 ifHCOutUcastPkts_val);
++                                         struct counter64 ifHCOutUcastPkts_val);
+     int             ifHCOutUcastPkts_undo(ifXTable_rowreq_ctx *
+                                           rowreq_ctx);
+ 
+     int             ifHCOutMulticastPkts_check_value(ifXTable_rowreq_ctx *
+                                                      rowreq_ctx,
+-                                                     U64
++                                                     struct counter64
+                                                      ifHCOutMulticastPkts_val);
+     int             ifHCOutMulticastPkts_undo_setup(ifXTable_rowreq_ctx *
+                                                     rowreq_ctx);
+     int             ifHCOutMulticastPkts_set(ifXTable_rowreq_ctx *
+                                              rowreq_ctx,
+-                                             U64 ifHCOutMulticastPkts_val);
++                                             struct counter64 ifHCOutMulticastPkts_val);
+     int             ifHCOutMulticastPkts_undo(ifXTable_rowreq_ctx *
+                                               rowreq_ctx);
+ 
+     int             ifHCOutBroadcastPkts_check_value(ifXTable_rowreq_ctx *
+                                                      rowreq_ctx,
+-                                                     U64
++                                                     struct counter64
+                                                      ifHCOutBroadcastPkts_val);
+     int             ifHCOutBroadcastPkts_undo_setup(ifXTable_rowreq_ctx *
+                                                     rowreq_ctx);
+     int             ifHCOutBroadcastPkts_set(ifXTable_rowreq_ctx *
+                                              rowreq_ctx,
+-                                             U64 ifHCOutBroadcastPkts_val);
++                                             struct counter64 ifHCOutBroadcastPkts_val);
+     int             ifHCOutBroadcastPkts_undo(ifXTable_rowreq_ctx *
+                                               rowreq_ctx);
+ 
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/if-mib/ifXTable/ifXTable_interface.c net-snmp-5.7.3.git/agent/mibgroup/if-mib/ifXTable/ifXTable_interface.c
+--- net-snmp-5.7.3.orig/agent/mibgroup/if-mib/ifXTable/ifXTable_interface.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/if-mib/ifXTable/ifXTable_interface.c	2018-09-10 08:19:42.917240479 +0900
+@@ -729,72 +729,72 @@
+          * ifHCInOctets(6)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IFHCINOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ifHCInOctets_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ifHCInOctets_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+          * ifHCInUcastPkts(7)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IFHCINUCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ifHCInUcastPkts_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ifHCInUcastPkts_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+          * ifHCInMulticastPkts(8)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IFHCINMULTICASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ifHCInMulticastPkts_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ifHCInMulticastPkts_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+          * ifHCInBroadcastPkts(9)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IFHCINBROADCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ifHCInBroadcastPkts_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ifHCInBroadcastPkts_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+          * ifHCOutOctets(10)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IFHCOUTOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ifHCOutOctets_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ifHCOutOctets_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+          * ifHCOutUcastPkts(11)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IFHCOUTUCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ifHCOutUcastPkts_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ifHCOutUcastPkts_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+          * ifHCOutMulticastPkts(12)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IFHCOUTMULTICASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ifHCOutMulticastPkts_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ifHCOutMulticastPkts_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+          * ifHCOutBroadcastPkts(13)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IFHCOUTBROADCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ifHCOutBroadcastPkts_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ifHCOutBroadcastPkts_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/data_access/systemstats_common.c net-snmp-5.7.3.git/agent/mibgroup/ip-mib/data_access/systemstats_common.c
+--- net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/data_access/systemstats_common.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/ip-mib/data_access/systemstats_common.c	2018-09-10 08:19:42.949240307 +0900
+@@ -264,7 +264,7 @@
+            && entry->stats.columnAvail[IPSYSTEMSTATSTABLE_HCOUTFRAGCREATES]
+         && entry->stats.columnAvail[IPSYSTEMSTATSTABLE_HCOUTDISCARDS]) {
+ 
+-        U64 tmp, tmp2, tmp3;
++        struct counter64 tmp, tmp2, tmp3;
+         tmp = entry->stats.HCOutRequests;
+         u64Incr(&tmp, &entry->stats.HCOutForwDatagrams);
+         u64Incr(&tmp, &entry->stats.HCOutFragCreates);
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_data_get.c net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_data_get.c
+--- net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_data_get.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_data_get.c	2018-09-10 08:19:42.981240135 +0900
+@@ -270,7 +270,7 @@
+  */
+ int
+ ipIfStatsHCInReceives_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                          U64 * ipIfStatsHCInReceives_val_ptr)
++                          struct counter64 * ipIfStatsHCInReceives_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCInReceives_val_ptr);
+@@ -395,7 +395,7 @@
+  */
+ int
+ ipIfStatsHCInOctets_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                        U64 * ipIfStatsHCInOctets_val_ptr)
++                        struct counter64 * ipIfStatsHCInOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCInOctets_val_ptr);
+@@ -862,7 +862,7 @@
+  */
+ int
+ ipIfStatsHCInForwDatagrams_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                               U64 * ipIfStatsHCInForwDatagrams_val_ptr)
++                               struct counter64 * ipIfStatsHCInForwDatagrams_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCInForwDatagrams_val_ptr);
+@@ -1267,7 +1267,7 @@
+  */
+ int
+ ipIfStatsHCInDelivers_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                          U64 * ipIfStatsHCInDelivers_val_ptr)
++                          struct counter64 * ipIfStatsHCInDelivers_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCInDelivers_val_ptr);
+@@ -1396,7 +1396,7 @@
+  */
+ int
+ ipIfStatsHCOutRequests_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                           U64 * ipIfStatsHCOutRequests_val_ptr)
++                           struct counter64 * ipIfStatsHCOutRequests_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCOutRequests_val_ptr);
+@@ -1532,7 +1532,7 @@
+  */
+ int
+ ipIfStatsHCOutForwDatagrams_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                                U64 * ipIfStatsHCOutForwDatagrams_val_ptr)
++                                struct counter64 * ipIfStatsHCOutForwDatagrams_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCOutForwDatagrams_val_ptr);
+@@ -1999,7 +1999,7 @@
+  */
+ int
+ ipIfStatsHCOutTransmits_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                            U64 * ipIfStatsHCOutTransmits_val_ptr)
++                            struct counter64 * ipIfStatsHCOutTransmits_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCOutTransmits_val_ptr);
+@@ -2123,7 +2123,7 @@
+  */
+ int
+ ipIfStatsHCOutOctets_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                         U64 * ipIfStatsHCOutOctets_val_ptr)
++                         struct counter64 * ipIfStatsHCOutOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCOutOctets_val_ptr);
+@@ -2245,7 +2245,7 @@
+  */
+ int
+ ipIfStatsHCInMcastPkts_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                           U64 * ipIfStatsHCInMcastPkts_val_ptr)
++                        struct counter64 * ipIfStatsHCInMcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCInMcastPkts_val_ptr);
+@@ -2372,7 +2372,7 @@
+  */
+ int
+ ipIfStatsHCInMcastOctets_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                             U64 * ipIfStatsHCInMcastOctets_val_ptr)
++                             struct counter64 * ipIfStatsHCInMcastOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCInMcastOctets_val_ptr);
+@@ -2497,7 +2497,7 @@
+  */
+ int
+ ipIfStatsHCOutMcastPkts_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                            U64 * ipIfStatsHCOutMcastPkts_val_ptr)
++                            struct counter64 * ipIfStatsHCOutMcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCOutMcastPkts_val_ptr);
+@@ -2621,7 +2621,7 @@
+  */
+ int
+ ipIfStatsHCOutMcastOctets_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                              U64 * ipIfStatsHCOutMcastOctets_val_ptr)
++                              struct counter64 * ipIfStatsHCOutMcastOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCOutMcastOctets_val_ptr);
+@@ -2743,7 +2743,7 @@
+  */
+ int
+ ipIfStatsHCInBcastPkts_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                           U64 * ipIfStatsHCInBcastPkts_val_ptr)
++                           struct counter64 * ipIfStatsHCInBcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCInBcastPkts_val_ptr);
+@@ -2865,7 +2865,7 @@
+  */
+ int
+ ipIfStatsHCOutBcastPkts_get(ipIfStatsTable_rowreq_ctx * rowreq_ctx,
+-                            U64 * ipIfStatsHCOutBcastPkts_val_ptr)
++                            struct counter64 * ipIfStatsHCOutBcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipIfStatsHCOutBcastPkts_val_ptr);
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_data_get.h net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_data_get.h
+--- net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_data_get.h	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_data_get.h	2018-09-10 08:19:42.981240135 +0900
+@@ -50,7 +50,7 @@
+                                             ipIfStatsInReceives_val_ptr);
+     int             ipIfStatsHCInReceives_get(ipIfStatsTable_rowreq_ctx *
+                                               rowreq_ctx,
+-                                              U64 *
++                                              struct counter64 *
+                                               ipIfStatsHCInReceives_val_ptr);
+     int             ipIfStatsInOctets_get(ipIfStatsTable_rowreq_ctx *
+                                           rowreq_ctx,
+@@ -58,7 +58,7 @@
+                                           ipIfStatsInOctets_val_ptr);
+     int             ipIfStatsHCInOctets_get(ipIfStatsTable_rowreq_ctx *
+                                             rowreq_ctx,
+-                                            U64 *
++                                            struct counter64 *
+                                             ipIfStatsHCInOctets_val_ptr);
+     int             ipIfStatsInHdrErrors_get(ipIfStatsTable_rowreq_ctx *
+                                              rowreq_ctx,
+@@ -87,7 +87,7 @@
+     int            
+         ipIfStatsHCInForwDatagrams_get(ipIfStatsTable_rowreq_ctx *
+                                        rowreq_ctx,
+-                                       U64 *
++                                       struct counter64 *
+                                        ipIfStatsHCInForwDatagrams_val_ptr);
+     int             ipIfStatsReasmReqds_get(ipIfStatsTable_rowreq_ctx *
+                                             rowreq_ctx,
+@@ -111,7 +111,7 @@
+                                             ipIfStatsInDelivers_val_ptr);
+     int             ipIfStatsHCInDelivers_get(ipIfStatsTable_rowreq_ctx *
+                                               rowreq_ctx,
+-                                              U64 *
++                                              struct counter64 *
+                                               ipIfStatsHCInDelivers_val_ptr);
+     int             ipIfStatsOutRequests_get(ipIfStatsTable_rowreq_ctx *
+                                              rowreq_ctx,
+@@ -119,7 +119,7 @@
+                                              ipIfStatsOutRequests_val_ptr);
+     int             ipIfStatsHCOutRequests_get(ipIfStatsTable_rowreq_ctx *
+                                                rowreq_ctx,
+-                                               U64 *
++                                               struct counter64 *
+                                                ipIfStatsHCOutRequests_val_ptr);
+     int             ipIfStatsOutForwDatagrams_get(ipIfStatsTable_rowreq_ctx
+                                                   * rowreq_ctx,
+@@ -128,7 +128,7 @@
+     int            
+         ipIfStatsHCOutForwDatagrams_get(ipIfStatsTable_rowreq_ctx *
+                                         rowreq_ctx,
+-                                        U64 *
++                                        struct counter64 *
+                                         ipIfStatsHCOutForwDatagrams_val_ptr);
+     int             ipIfStatsOutDiscards_get(ipIfStatsTable_rowreq_ctx *
+                                              rowreq_ctx,
+@@ -156,7 +156,7 @@
+                                               ipIfStatsOutTransmits_val_ptr);
+     int             ipIfStatsHCOutTransmits_get(ipIfStatsTable_rowreq_ctx *
+                                                 rowreq_ctx,
+-                                                U64 *
++                                                struct counter64 *
+                                                 ipIfStatsHCOutTransmits_val_ptr);
+     int             ipIfStatsOutOctets_get(ipIfStatsTable_rowreq_ctx *
+                                            rowreq_ctx,
+@@ -164,7 +164,7 @@
+                                            ipIfStatsOutOctets_val_ptr);
+     int             ipIfStatsHCOutOctets_get(ipIfStatsTable_rowreq_ctx *
+                                              rowreq_ctx,
+-                                             U64 *
++                                             struct counter64 *
+                                              ipIfStatsHCOutOctets_val_ptr);
+     int             ipIfStatsInMcastPkts_get(ipIfStatsTable_rowreq_ctx *
+                                              rowreq_ctx,
+@@ -172,7 +172,7 @@
+                                              ipIfStatsInMcastPkts_val_ptr);
+     int             ipIfStatsHCInMcastPkts_get(ipIfStatsTable_rowreq_ctx *
+                                                rowreq_ctx,
+-                                               U64 *
++                                               struct counter64 *
+                                                ipIfStatsHCInMcastPkts_val_ptr);
+     int             ipIfStatsInMcastOctets_get(ipIfStatsTable_rowreq_ctx *
+                                                rowreq_ctx,
+@@ -180,7 +180,7 @@
+                                                ipIfStatsInMcastOctets_val_ptr);
+     int             ipIfStatsHCInMcastOctets_get(ipIfStatsTable_rowreq_ctx
+                                                  * rowreq_ctx,
+-                                                 U64 *
++                                                 struct counter64 *
+                                                  ipIfStatsHCInMcastOctets_val_ptr);
+     int             ipIfStatsOutMcastPkts_get(ipIfStatsTable_rowreq_ctx *
+                                               rowreq_ctx,
+@@ -188,7 +188,7 @@
+                                               ipIfStatsOutMcastPkts_val_ptr);
+     int             ipIfStatsHCOutMcastPkts_get(ipIfStatsTable_rowreq_ctx *
+                                                 rowreq_ctx,
+-                                                U64 *
++                                                struct counter64 *
+                                                 ipIfStatsHCOutMcastPkts_val_ptr);
+     int             ipIfStatsOutMcastOctets_get(ipIfStatsTable_rowreq_ctx *
+                                                 rowreq_ctx,
+@@ -196,7 +196,7 @@
+                                                 ipIfStatsOutMcastOctets_val_ptr);
+     int             ipIfStatsHCOutMcastOctets_get(ipIfStatsTable_rowreq_ctx
+                                                   * rowreq_ctx,
+-                                                  U64 *
++                                                  struct counter64 *
+                                                   ipIfStatsHCOutMcastOctets_val_ptr);
+     int             ipIfStatsInBcastPkts_get(ipIfStatsTable_rowreq_ctx *
+                                              rowreq_ctx,
+@@ -204,7 +204,7 @@
+                                              ipIfStatsInBcastPkts_val_ptr);
+     int             ipIfStatsHCInBcastPkts_get(ipIfStatsTable_rowreq_ctx *
+                                                rowreq_ctx,
+-                                               U64 *
++                                               struct counter64 *
+                                                ipIfStatsHCInBcastPkts_val_ptr);
+     int             ipIfStatsOutBcastPkts_get(ipIfStatsTable_rowreq_ctx *
+                                               rowreq_ctx,
+@@ -212,7 +212,7 @@
+                                               ipIfStatsOutBcastPkts_val_ptr);
+     int             ipIfStatsHCOutBcastPkts_get(ipIfStatsTable_rowreq_ctx *
+                                                 rowreq_ctx,
+-                                                U64 *
++                                                struct counter64 *
+                                                 ipIfStatsHCOutBcastPkts_val_ptr);
+     int            
+         ipIfStatsDiscontinuityTime_get(ipIfStatsTable_rowreq_ctx *
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_interface.c net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_interface.c
+--- net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_interface.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipIfStatsTable/ipIfStatsTable_interface.c	2018-09-10 08:19:42.985240113 +0900
+@@ -722,10 +722,10 @@
+          * ipIfStatsHCInReceives(4)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCINRECEIVES:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCInReceives_get(rowreq_ctx,
+-                                       (U64 *) var->val.string);
++                                       (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -741,9 +741,9 @@
+          * ipIfStatsHCInOctets(6)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCINOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ipIfStatsHCInOctets_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ipIfStatsHCInOctets_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -810,10 +810,10 @@
+          * ipIfStatsHCInForwDatagrams(13)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCINFORWDATAGRAMS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCInForwDatagrams_get(rowreq_ctx,
+-                                            (U64 *) var->val.string);
++                                            (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -869,10 +869,10 @@
+          * ipIfStatsHCInDelivers(19)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCINDELIVERS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCInDelivers_get(rowreq_ctx,
+-                                       (U64 *) var->val.string);
++                                       (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -889,10 +889,10 @@
+          * ipIfStatsHCOutRequests(21)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCOUTREQUESTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCOutRequests_get(rowreq_ctx,
+-                                        (U64 *) var->val.string);
++                                        (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -909,10 +909,10 @@
+          * ipIfStatsHCOutForwDatagrams(24)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCOUTFORWDATAGRAMS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCOutForwDatagrams_get(rowreq_ctx,
+-                                             (U64 *) var->val.string);
++                                             (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -979,10 +979,10 @@
+          * ipIfStatsHCOutTransmits(31)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCOUTTRANSMITS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCOutTransmits_get(rowreq_ctx,
+-                                         (U64 *) var->val.string);
++                                         (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -999,9 +999,9 @@
+          * ipIfStatsHCOutOctets(33)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCOUTOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+-        rc = ipIfStatsHCOutOctets_get(rowreq_ctx, (U64 *) var->val.string);
++        rc = ipIfStatsHCOutOctets_get(rowreq_ctx, (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1018,10 +1018,10 @@
+          * ipIfStatsHCInMcastPkts(35)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCINMCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCInMcastPkts_get(rowreq_ctx,
+-                                        (U64 *) var->val.string);
++                                        (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1038,10 +1038,10 @@
+          * ipIfStatsHCInMcastOctets(37)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCINMCASTOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCInMcastOctets_get(rowreq_ctx,
+-                                          (U64 *) var->val.string);
++                                          (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1058,10 +1058,10 @@
+          * ipIfStatsHCOutMcastPkts(39)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCOUTMCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCOutMcastPkts_get(rowreq_ctx,
+-                                         (U64 *) var->val.string);
++                                         (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1078,10 +1078,10 @@
+          * ipIfStatsHCOutMcastOctets(41)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCOUTMCASTOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCOutMcastOctets_get(rowreq_ctx,
+-                                           (U64 *) var->val.string);
++                                           (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1098,10 +1098,10 @@
+          * ipIfStatsHCInBcastPkts(43)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCINBCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCInBcastPkts_get(rowreq_ctx,
+-                                        (U64 *) var->val.string);
++                                        (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1118,10 +1118,10 @@
+          * ipIfStatsHCOutBcastPkts(45)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPIFSTATSHCOUTBCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipIfStatsHCOutBcastPkts_get(rowreq_ctx,
+-                                         (U64 *) var->val.string);
++                                         (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable.c net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable.c
+--- net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable.c	2018-09-10 08:19:42.985240113 +0900
+@@ -452,7 +452,7 @@
+  */
+ int
+ ipSystemStatsHCInReceives_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                              U64 * ipSystemStatsHCInReceives_val_ptr)
++                              struct counter64 * ipSystemStatsHCInReceives_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCInReceives_val_ptr);
+@@ -579,7 +579,7 @@
+  */
+ int
+ ipSystemStatsHCInOctets_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                            U64 * ipSystemStatsHCInOctets_val_ptr)
++                            struct counter64 * ipSystemStatsHCInOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCInOctets_val_ptr);
+@@ -1058,7 +1058,7 @@
+ int
+ ipSystemStatsHCInForwDatagrams_get(ipSystemStatsTable_rowreq_ctx *
+                                    rowreq_ctx,
+-                                   U64 *
++                                   struct counter64 *
+                                    ipSystemStatsHCInForwDatagrams_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+@@ -1474,7 +1474,7 @@
+  */
+ int
+ ipSystemStatsHCInDelivers_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                              U64 * ipSystemStatsHCInDelivers_val_ptr)
++                              struct counter64 * ipSystemStatsHCInDelivers_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCInDelivers_val_ptr);
+@@ -1602,7 +1602,7 @@
+  */
+ int
+ ipSystemStatsHCOutRequests_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                               U64 * ipSystemStatsHCOutRequests_val_ptr)
++                               struct counter64 * ipSystemStatsHCOutRequests_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCOutRequests_val_ptr);
+@@ -1809,7 +1809,7 @@
+ int
+ ipSystemStatsHCOutForwDatagrams_get(ipSystemStatsTable_rowreq_ctx *
+                                     rowreq_ctx,
+-                                    U64 *
++                                    struct counter64 *
+                                     ipSystemStatsHCOutForwDatagrams_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+@@ -2288,7 +2288,7 @@
+  */
+ int
+ ipSystemStatsHCOutTransmits_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                                U64 * ipSystemStatsHCOutTransmits_val_ptr)
++                                struct counter64 * ipSystemStatsHCOutTransmits_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCOutTransmits_val_ptr);
+@@ -2415,7 +2415,7 @@
+  */
+ int
+ ipSystemStatsHCOutOctets_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                             U64 * ipSystemStatsHCOutOctets_val_ptr)
++                             struct counter64 * ipSystemStatsHCOutOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCOutOctets_val_ptr);
+@@ -2539,7 +2539,7 @@
+  */
+ int
+ ipSystemStatsHCInMcastPkts_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                               U64 * ipSystemStatsHCInMcastPkts_val_ptr)
++                               struct counter64 * ipSystemStatsHCInMcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCInMcastPkts_val_ptr);
+@@ -2665,7 +2665,7 @@
+ int
+ ipSystemStatsHCInMcastOctets_get(ipSystemStatsTable_rowreq_ctx *
+                                  rowreq_ctx,
+-                                 U64 *
++                                 struct counter64 *
+                                  ipSystemStatsHCInMcastOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+@@ -2790,7 +2790,7 @@
+  */
+ int
+ ipSystemStatsHCOutMcastPkts_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                                U64 * ipSystemStatsHCOutMcastPkts_val_ptr)
++                                struct counter64 * ipSystemStatsHCOutMcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCOutMcastPkts_val_ptr);
+@@ -2921,7 +2921,7 @@
+ int
+ ipSystemStatsHCOutMcastOctets_get(ipSystemStatsTable_rowreq_ctx *
+                                   rowreq_ctx,
+-                                  U64 *
++                                  struct counter64 *
+                                   ipSystemStatsHCOutMcastOctets_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+@@ -3046,7 +3046,7 @@
+  */
+ int
+ ipSystemStatsHCInBcastPkts_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                               U64 * ipSystemStatsHCInBcastPkts_val_ptr)
++                               struct counter64 * ipSystemStatsHCInBcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCInBcastPkts_val_ptr);
+@@ -3170,7 +3170,7 @@
+  */
+ int
+ ipSystemStatsHCOutBcastPkts_get(ipSystemStatsTable_rowreq_ctx * rowreq_ctx,
+-                                U64 * ipSystemStatsHCOutBcastPkts_val_ptr)
++                                struct counter64 * ipSystemStatsHCOutBcastPkts_val_ptr)
+ {
+    /** we should have a non-NULL pointer */
+     netsnmp_assert(NULL != ipSystemStatsHCOutBcastPkts_val_ptr);
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable.h net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable.h
+--- net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable.h	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable.h	2018-09-10 08:19:42.985240113 +0900
+@@ -303,7 +303,7 @@
+         
+         ipSystemStatsHCInReceives_get(ipSystemStatsTable_rowreq_ctx *
+                                       rowreq_ctx,
+-                                      U64 *
++                                      struct counter64 *
+                                       ipSystemStatsHCInReceives_val_ptr);
+     int             ipSystemStatsInOctets_get(ipSystemStatsTable_rowreq_ctx
+                                               * rowreq_ctx,
+@@ -327,7 +327,7 @@
+         
+         ipSystemStatsHCInOctets_get(ipSystemStatsTable_rowreq_ctx *
+                                     rowreq_ctx,
+-                                    U64 * ipSystemStatsHCInOctets_val_ptr);
++                                    struct counter64 * ipSystemStatsHCInOctets_val_ptr);
+     int
+      
+         
+@@ -466,7 +466,7 @@
+         
+         ipSystemStatsHCInForwDatagrams_get(ipSystemStatsTable_rowreq_ctx *
+                                            rowreq_ctx,
+-                                           U64 *
++                                           struct counter64 *
+                                            ipSystemStatsHCInForwDatagrams_val_ptr);
+     int
+      
+@@ -570,7 +570,7 @@
+         
+         ipSystemStatsHCInDelivers_get(ipSystemStatsTable_rowreq_ctx *
+                                       rowreq_ctx,
+-                                      U64 *
++                                      struct counter64 *
+                                       ipSystemStatsHCInDelivers_val_ptr);
+     int
+      
+@@ -610,7 +610,7 @@
+         
+         ipSystemStatsHCOutRequests_get(ipSystemStatsTable_rowreq_ctx *
+                                        rowreq_ctx,
+-                                       U64 *
++                                       struct counter64 *
+                                        ipSystemStatsHCOutRequests_val_ptr);
+     int
+      
+@@ -670,7 +670,7 @@
+         
+         ipSystemStatsHCOutForwDatagrams_get(ipSystemStatsTable_rowreq_ctx *
+                                             rowreq_ctx,
+-                                            U64 *
++                                            struct counter64 *
+                                             ipSystemStatsHCOutForwDatagrams_val_ptr);
+     int
+      
+@@ -810,7 +810,7 @@
+         
+         ipSystemStatsHCOutTransmits_get(ipSystemStatsTable_rowreq_ctx *
+                                         rowreq_ctx,
+-                                        U64 *
++                                        struct counter64 *
+                                         ipSystemStatsHCOutTransmits_val_ptr);
+     int
+      
+@@ -850,7 +850,7 @@
+         
+         ipSystemStatsHCOutOctets_get(ipSystemStatsTable_rowreq_ctx *
+                                      rowreq_ctx,
+-                                     U64 *
++                                     struct counter64 *
+                                      ipSystemStatsHCOutOctets_val_ptr);
+     int
+      
+@@ -890,7 +890,7 @@
+         
+         ipSystemStatsHCInMcastPkts_get(ipSystemStatsTable_rowreq_ctx *
+                                        rowreq_ctx,
+-                                       U64 *
++                                       struct counter64 *
+                                        ipSystemStatsHCInMcastPkts_val_ptr);
+     int
+      
+@@ -930,7 +930,7 @@
+         
+         ipSystemStatsHCInMcastOctets_get(ipSystemStatsTable_rowreq_ctx *
+                                          rowreq_ctx,
+-                                         U64 *
++                                         struct counter64 *
+                                          ipSystemStatsHCInMcastOctets_val_ptr);
+     int
+      
+@@ -970,7 +970,7 @@
+         
+         ipSystemStatsHCOutMcastPkts_get(ipSystemStatsTable_rowreq_ctx *
+                                         rowreq_ctx,
+-                                        U64 *
++                                        struct counter64 *
+                                         ipSystemStatsHCOutMcastPkts_val_ptr);
+     int
+      
+@@ -1010,7 +1010,7 @@
+         
+         ipSystemStatsHCOutMcastOctets_get(ipSystemStatsTable_rowreq_ctx *
+                                           rowreq_ctx,
+-                                          U64 *
++                                          struct counter64 *
+                                           ipSystemStatsHCOutMcastOctets_val_ptr);
+     int
+      
+@@ -1050,7 +1050,7 @@
+         
+         ipSystemStatsHCInBcastPkts_get(ipSystemStatsTable_rowreq_ctx *
+                                        rowreq_ctx,
+-                                       U64 *
++                                       struct counter64 *
+                                        ipSystemStatsHCInBcastPkts_val_ptr);
+     int
+      
+@@ -1090,7 +1090,7 @@
+         
+         ipSystemStatsHCOutBcastPkts_get(ipSystemStatsTable_rowreq_ctx *
+                                         rowreq_ctx,
+-                                        U64 *
++                                        struct counter64 *
+                                         ipSystemStatsHCOutBcastPkts_val_ptr);
+     int
+      
+diff -ur net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable_interface.c net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable_interface.c
+--- net-snmp-5.7.3.orig/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable_interface.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/agent/mibgroup/ip-mib/ipSystemStatsTable/ipSystemStatsTable_interface.c	2018-09-10 08:19:42.989240092 +0900
+@@ -674,10 +674,10 @@
+          * ipSystemStatsHCInReceives(4)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCINRECEIVES:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCInReceives_get(rowreq_ctx,
+-                                           (U64 *) var->val.string);
++                                           (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -694,10 +694,10 @@
+          * ipSystemStatsHCInOctets(6)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCINOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCInOctets_get(rowreq_ctx,
+-                                         (U64 *) var->val.string);
++                                         (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -764,10 +764,10 @@
+          * ipSystemStatsHCInForwDatagrams(13)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCINFORWDATAGRAMS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCInForwDatagrams_get(rowreq_ctx,
+-                                                (U64 *) var->val.string);
++                                                (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -824,10 +824,10 @@
+          * ipSystemStatsHCInDelivers(19)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCINDELIVERS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCInDelivers_get(rowreq_ctx,
+-                                           (U64 *) var->val.string);
++                                           (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -844,10 +844,10 @@
+          * ipSystemStatsHCOutRequests(21)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCOUTREQUESTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCOutRequests_get(rowreq_ctx,
+-                                            (U64 *) var->val.string);
++                                            (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -874,10 +874,10 @@
+          * ipSystemStatsHCOutForwDatagrams(24)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCOUTFORWDATAGRAMS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCOutForwDatagrams_get(rowreq_ctx,
+-                                                 (U64 *) var->val.string);
++                                                 (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -944,10 +944,10 @@
+          * ipSystemStatsHCOutTransmits(31)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCOUTTRANSMITS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCOutTransmits_get(rowreq_ctx,
+-                                             (U64 *) var->val.string);
++                                             (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -964,10 +964,10 @@
+          * ipSystemStatsHCOutOctets(33)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCOUTOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCOutOctets_get(rowreq_ctx,
+-                                          (U64 *) var->val.string);
++                                          (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -984,10 +984,10 @@
+          * ipSystemStatsHCInMcastPkts(35)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCINMCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCInMcastPkts_get(rowreq_ctx,
+-                                            (U64 *) var->val.string);
++                                            (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1004,10 +1004,10 @@
+          * ipSystemStatsHCInMcastOctets(37)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCINMCASTOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCInMcastOctets_get(rowreq_ctx,
+-                                              (U64 *) var->val.string);
++                                              (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1024,10 +1024,10 @@
+          * ipSystemStatsHCOutMcastPkts(39)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCOUTMCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCOutMcastPkts_get(rowreq_ctx,
+-                                             (U64 *) var->val.string);
++                                             (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1044,10 +1044,10 @@
+          * ipSystemStatsHCOutMcastOctets(41)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCOUTMCASTOCTETS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCOutMcastOctets_get(rowreq_ctx,
+-                                               (U64 *) var->val.string);
++                                               (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1064,10 +1064,10 @@
+          * ipSystemStatsHCInBcastPkts(43)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCINBCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCInBcastPkts_get(rowreq_ctx,
+-                                            (U64 *) var->val.string);
++                                            (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+@@ -1084,10 +1084,10 @@
+          * ipSystemStatsHCOutBcastPkts(45)/COUNTER64/ASN_COUNTER64/U64(U64)//l/A/w/e/r/d/h 
+          */
+     case COLUMN_IPSYSTEMSTATSHCOUTBCASTPKTS:
+-        var->val_len = sizeof(U64);
++        var->val_len = sizeof(struct counter64);
+         var->type = ASN_COUNTER64;
+         rc = ipSystemStatsHCOutBcastPkts_get(rowreq_ctx,
+-                                             (U64 *) var->val.string);
++                                             (struct counter64 *) var->val.string);
+         break;
+ 
+         /*
+diff -ur net-snmp-5.7.3.orig/include/net-snmp/data_access/ipstats.h net-snmp-5.7.3.git/include/net-snmp/data_access/ipstats.h
+--- net-snmp-5.7.3.orig/include/net-snmp/data_access/ipstats.h	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/include/net-snmp/data_access/ipstats.h	2018-09-10 08:19:43.469237512 +0900
+@@ -58,45 +58,45 @@
+     * other columns, when underlying OS does not provide them.
+     * Always fill at least 32 bits, the table is periodically polled -> 32 bit
+     * overflow shall be detected and 64 bit value should be computed automatically. */
+-   U64             HCInReceives;
+-   U64             HCInOctets;
++   struct counter64 HCInReceives;
++   struct counter64 HCInOctets;
+    u_long          InHdrErrors;
+-   U64             HCInNoRoutes; 
++   struct counter64 HCInNoRoutes; 
+    u_long          InAddrErrors;
+    u_long          InUnknownProtos;
+    u_long          InTruncatedPkts;
+    
+    /* optional, can be computed from HCInNoRoutes and HCOutForwDatagrams */
+-   U64             HCInForwDatagrams; 
++   struct counter64 HCInForwDatagrams; 
+    
+    u_long          ReasmReqds;
+    u_long          ReasmOKs;
+    u_long          ReasmFails;
+    u_long          InDiscards;
+-   U64             HCInDelivers;
+-   U64             HCOutRequests;
+-   U64             HCOutNoRoutes;
+-   U64             HCOutForwDatagrams;
+-   U64             HCOutDiscards;
++   struct counter64 HCInDelivers;
++   struct counter64 HCOutRequests;
++   struct counter64 HCOutNoRoutes;
++   struct counter64 HCOutForwDatagrams;
++   struct counter64 HCOutDiscards;
+    
+    /* optional, can be computed from HCOutFragOKs + HCOutFragFails*/
+-   U64             HCOutFragReqds;
+-   U64             HCOutFragOKs;
+-   U64             HCOutFragFails;
+-   U64             HCOutFragCreates;
++   struct counter64 HCOutFragReqds;
++   struct counter64 HCOutFragOKs;
++   struct counter64 HCOutFragFails;
++   struct counter64 HCOutFragCreates;
+    
+    /* optional, can be computed from 
+     * HCOutRequests +HCOutForwDatagrams + HCOutFragCreates
+     * - HCOutFragReqds - HCOutNoRoutes  - HCOutDiscards */
+-   U64             HCOutTransmits;
++   struct counter64 HCOutTransmits;
+    
+-   U64             HCOutOctets;
+-   U64             HCInMcastPkts;
+-   U64             HCInMcastOctets;
+-   U64             HCOutMcastPkts;
+-   U64             HCOutMcastOctets;
+-   U64             HCInBcastPkts;
+-   U64             HCOutBcastPkts;
++   struct counter64 HCOutOctets;
++   struct counter64 HCInMcastPkts;
++   struct counter64 HCInMcastOctets;
++   struct counter64 HCOutMcastPkts;
++   struct counter64 HCOutMcastOctets;
++   struct counter64 HCInBcastPkts;
++   struct counter64 HCOutBcastPkts;
+ 
+    /* Array of available columns.*/
+    int             columnAvail[IPSYSTEMSTATSTABLE_LAST+1];
+diff -ur net-snmp-5.7.3.orig/include/net-snmp/library/int64.h net-snmp-5.7.3.git/include/net-snmp/library/int64.h
+--- net-snmp-5.7.3.orig/include/net-snmp/library/int64.h	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/include/net-snmp/library/int64.h	2018-09-10 08:19:43.477237469 +0900
+@@ -5,31 +5,43 @@
+ extern          "C" {
+ #endif
+ 
++#ifndef	NETSNMP_REMOVE_U64	/* Fixed compile error from 5.8 */
++	/*
++	 * Note: using the U64 typedef is deprecated because this typedef conflicts
++	 * with a typedef with the same name defined in the Perl header files.
++	 */
+     typedef struct counter64 U64;
++#endif
+ 
+ #define I64CHARSZ 21
+ 
+-    void            divBy10(U64, U64 *, unsigned int *);
+-    void            multBy10(U64, U64 *);
+-    void            incrByU16(U64 *, unsigned int);
+-    void            incrByU32(U64 *, unsigned int);
++    void            divBy10(struct counter64, struct counter64 *,
++							unsigned int *);
++    void            multBy10(struct counter64, struct counter64 *);
++    void            incrByU16(struct counter64 *, unsigned int);
++    void            incrByU32(struct counter64 *, unsigned int);
+     NETSNMP_IMPORT
+-    void            zeroU64(U64 *);
+-    int             isZeroU64(const U64 *);
++    void            zeroU64(struct counter64 *);
++    int             isZeroU64(const struct counter64 *);
+     NETSNMP_IMPORT
+-    void            printU64(char *, const U64 *);
++    void            printU64(char *, const struct counter64 *);
+     NETSNMP_IMPORT
+-    void            printI64(char *, const U64 *);
+-    int             read64(U64 *, const char *);
++    void            printI64(char *, const struct counter64 *);
++    int             read64(struct counter64 *, const char *);
+     NETSNMP_IMPORT
+-    void            u64Subtract(const U64 * pu64one, const U64 * pu64two,
+-                                U64 * pu64out);
+-    void            u64Incr(U64 * pu64out, const U64 * pu64one);
+-    void            u64UpdateCounter(U64 * pu64out, const U64 * pu64one,
+-                                     const U64 * pu64two);
+-    void            u64Copy(U64 * pu64one, const U64 * pu64two);
++    void            u64Subtract(const struct counter64 * pu64one,
++								const struct counter64 * pu64two,
++                                struct counter64 * pu64out);
++    void            u64Incr(struct counter64 * pu64out,
++							const struct counter64 * pu64one);
++    void            u64UpdateCounter(struct counter64 * pu64out,
++									 const struct counter64 * pu64one,
++                                     const struct counter64 * pu64two);
++    void            u64Copy(struct counter64 * pu64one,
++							const struct counter64 * pu64two);
+ 
+-    int             netsnmp_c64_check_for_32bit_wrap(U64 *old_val, U64 *new_val,
++    int             netsnmp_c64_check_for_32bit_wrap(struct counter64 *old_val,
++													 struct counter64 *new_val,
+                                                      int adjust);
+     NETSNMP_IMPORT
+     int             netsnmp_c64_check32_and_update(struct counter64 *prev_val,
+diff -ur net-snmp-5.7.3.orig/perl/agent/default_store/Makefile.PL net-snmp-5.7.3.git/perl/agent/default_store/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/agent/default_store/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/agent/default_store/Makefile.PL	2018-09-10 08:19:43.813235663 +0900
+@@ -3,11 +3,8 @@
+ use Config;
+ use Getopt::Long;
+ my $lib_version;
+-my %MakeParams = ();
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ Check_Version();
+ 
+diff -ur net-snmp-5.7.3.orig/perl/agent/Makefile.PL net-snmp-5.7.3.git/perl/agent/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/agent/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/agent/Makefile.PL	2018-09-10 08:19:43.813235663 +0900
+@@ -3,11 +3,8 @@
+ use Config;
+ use Getopt::Long;
+ my $lib_version;
+-my %MakeParams = ();
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ Check_Version();
+ 
+diff -ur net-snmp-5.7.3.orig/perl/agent/Support/Makefile.PL net-snmp-5.7.3.git/perl/agent/Support/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/agent/Support/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/agent/Support/Makefile.PL	2018-09-10 08:19:43.813235663 +0900
+@@ -3,14 +3,11 @@
+ use Config;
+ use Getopt::Long;
+ my $lib_version;
+-my %MakeParams = ();
+ 
+ # See lib/ExtUtils/MakeMaker.pm for details of how to influence
+ # the contents of the Makefile that is written.
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ Check_Version();
+ 
+diff -ur net-snmp-5.7.3.orig/perl/ASN/Makefile.PL net-snmp-5.7.3.git/perl/ASN/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/ASN/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/ASN/Makefile.PL	2018-09-10 08:19:43.769235899 +0900
+@@ -7,9 +7,7 @@
+ # See lib/ExtUtils/MakeMaker.pm for details of how to influence
+ # the contents of the Makefile that is written.
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ Check_Version();
+ 
+diff -ur net-snmp-5.7.3.orig/perl/default_store/Makefile.PL net-snmp-5.7.3.git/perl/default_store/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/default_store/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/default_store/Makefile.PL	2018-09-10 08:19:43.821235620 +0900
+@@ -3,11 +3,8 @@
+ use Config;
+ use Getopt::Long;
+ my $lib_version;
+-my %MakeParams = ();
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ 
+ sub InitMakeParams {
+diff -ur net-snmp-5.7.3.orig/perl/Makefile.PL net-snmp-5.7.3.git/perl/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/Makefile.PL	2018-09-10 08:19:43.773235878 +0900
+@@ -3,9 +3,7 @@
+ use Getopt::Long;
+ require 5;
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ sub InitMakeParams {
+     $nsconfig="net-snmp-config"; # in path by default
+diff -ur net-snmp-5.7.3.orig/perl/OID/Makefile.PL net-snmp-5.7.3.git/perl/OID/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/OID/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/OID/Makefile.PL	2018-09-10 08:19:43.777235856 +0900
+@@ -6,11 +6,8 @@
+ use Config;
+ use Getopt::Long;
+ my $lib_version;
+-my %MakeParams = ();
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ Check_Version();
+ 
+diff -ur net-snmp-5.7.3.orig/perl/SNMP/Makefile.PL net-snmp-5.7.3.git/perl/SNMP/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/SNMP/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/SNMP/Makefile.PL	2018-09-10 08:19:43.781235835 +0900
+@@ -3,15 +3,12 @@
+ use Config;
+ use Getopt::Long;
+ my $lib_version;
+-my %MakeParams = ();
+ my $opts;
+ 
+ # See lib/ExtUtils/MakeMaker.pm for details of how to influence
+ # the contents of the Makefile that is written.
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ Check_Version();
+ 
+diff -ur net-snmp-5.7.3.orig/perl/TrapReceiver/Makefile.PL net-snmp-5.7.3.git/perl/TrapReceiver/Makefile.PL
+--- net-snmp-5.7.3.orig/perl/TrapReceiver/Makefile.PL	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/perl/TrapReceiver/Makefile.PL	2018-09-10 08:19:43.805235706 +0900
+@@ -3,11 +3,8 @@
+ use Config;
+ use Getopt::Long;
+ my $lib_version;
+-my %MakeParams = ();
+ 
+-%MakeParams = InitMakeParams();
+-
+-WriteMakefile(%MakeParams);
++WriteMakefile(InitMakeParams());
+ 
+ Check_Version();
+ 
+diff -ur net-snmp-5.7.3.orig/snmplib/int64.c net-snmp-5.7.3.git/snmplib/int64.c
+--- net-snmp-5.7.3.orig/snmplib/int64.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/snmplib/int64.c	2018-09-10 08:19:43.865235383 +0900
+@@ -33,7 +33,7 @@
+  * @param[out] puR   Remainder.
+  */
+ void
+-divBy10(U64 u64, U64 * pu64Q, unsigned int *puR)
++divBy10(struct counter64 u64, struct counter64 * pu64Q, unsigned int *puR)
+ {
+     unsigned long   ulT;
+     unsigned long   ulQ;
+@@ -83,7 +83,7 @@
+  * @param[out] pu64P Product.
+  */
+ void
+-multBy10(U64 u64, U64 * pu64P)
++multBy10(struct counter64 u64, struct counter64 * pu64P)
+ {
+     unsigned long   ulT;
+     unsigned long   ulP;
+@@ -130,7 +130,7 @@
+  *
+  */
+ void
+-incrByU16(U64 * pu64, unsigned int u16)
++incrByU16(struct counter64 * pu64, unsigned int u16)
+ {
+     incrByU32(pu64, u16);
+ }
+@@ -143,7 +143,7 @@
+  *
+  */
+ void
+-incrByU32(U64 * pu64, unsigned int u32)
++incrByU32(struct counter64 * pu64, unsigned int u32)
+ {
+     uint32_t tmp;
+ 
+@@ -161,7 +161,7 @@
+  * @param[out] pu64out pu64one - pu64two.
+  */
+ void
+-u64Subtract(const U64 * pu64one, const U64 * pu64two, U64 * pu64out)
++u64Subtract(const struct counter64 * pu64one, const struct counter64 * pu64two, struct counter64 * pu64out)
+ {
+     int carry;
+ 
+@@ -177,7 +177,7 @@
+  * @param[in,out] pu64out pu64out += pu64one.
+  */
+ void
+-u64Incr(U64 * pu64out, const U64 * pu64one)
++u64Incr(struct counter64 * pu64out, const struct counter64 * pu64one)
+ {
+     pu64out->high = (uint32_t)(pu64out->high + pu64one->high);
+     incrByU32(pu64out, pu64one->low);
+@@ -191,9 +191,9 @@
+  * @param[out] pu64out pu64out += (pu64one - pu64two)
+  */
+ void
+-u64UpdateCounter(U64 * pu64out, const U64 * pu64one, const U64 * pu64two)
++u64UpdateCounter(struct counter64 * pu64out, const struct counter64 * pu64one, const struct counter64 * pu64two)
+ {
+-    U64 tmp;
++    struct counter64 tmp;
+ 
+     u64Subtract(pu64one, pu64two, &tmp);
+     u64Incr(pu64out, &tmp);
+@@ -208,7 +208,7 @@
+  * @param[out] pu64one Where to store the copy - *pu64one = *pu64two.
+  */
+ void
+-u64Copy(U64 * pu64one, const U64 * pu64two)
++u64Copy(struct counter64 * pu64one, const struct counter64 * pu64two)
+ {
+     *pu64one = *pu64two;
+ }
+@@ -220,7 +220,7 @@
+  * @param[in] pu64 Number to be zeroed.
+  */
+ void
+-zeroU64(U64 * pu64)
++zeroU64(struct counter64 * pu64)
+ {
+     pu64->low = 0;
+     pu64->high = 0;
+@@ -232,7 +232,7 @@
+  * @param[in] pu64 Number to be checked.
+  */
+ int
+-isZeroU64(const U64 * pu64)
++isZeroU64(const struct counter64 * pu64)
+ {
+     return pu64->low == 0 && pu64->high == 0;
+ }
+@@ -390,10 +390,10 @@
+ /** Convert an unsigned 64-bit number to ASCII. */
+ void
+ printU64(char *buf, /* char [I64CHARSZ+1]; */
+-         const U64 * pu64)
++         const struct counter64 * pu64)
+ {
+-    U64             u64a;
+-    U64             u64b;
++    struct counter64 u64a;
++    struct counter64 u64b;
+ 
+     char            aRes[I64CHARSZ + 1];
+     unsigned int    u;
+@@ -414,9 +414,9 @@
+ /** Convert a signed 64-bit number to ASCII. */
+ void
+ printI64(char *buf, /* char [I64CHARSZ+1]; */
+-         const U64 * pu64)
++         const struct counter64 * pu64)
+ {
+-    U64             u64a;
++    struct counter64 u64a;
+ 
+     if (pu64->high & 0x80000000) {
+         u64a.high = (uint32_t) ~pu64->high;
+@@ -431,9 +431,9 @@
+ 
+ /** Convert a signed 64-bit integer from ASCII to U64. */
+ int
+-read64(U64 * i64, const char *str)
++read64(struct counter64 * i64, const char *str)
+ {
+-    U64             i64p;
++    struct counter64 i64p;
+     unsigned int    u;
+     int             sign = 0;
+     int             ok = 0;
+diff -ur net-snmp-5.7.3.orig/snmplib/read_config.c net-snmp-5.7.3.git/snmplib/read_config.c
+--- net-snmp-5.7.3.orig/snmplib/read_config.c	2014-12-09 05:23:22.000000000 +0900
++++ net-snmp-5.7.3.git/snmplib/read_config.c	2018-09-10 08:19:43.897235211 +0900
+@@ -2270,10 +2270,10 @@
+         return readfrom;
+ 
+     case ASN_COUNTER64:
+-        if (*len < sizeof(U64))
++        if (*len < sizeof(struct counter64))
+             return NULL;
+-        *len = sizeof(U64);
+-        read64((U64 *) dataptr, readfrom);
++        *len = sizeof(struct counter64);
++        read64((struct counter64 *) dataptr, readfrom);
+         readfrom = skip_token(readfrom);
+         return readfrom;
+     }

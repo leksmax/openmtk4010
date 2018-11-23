@@ -1,0 +1,128 @@
+--- linux-4.4.124.orig/Makefile 2018-05-07 05:31:51.000000000 +0000
++++ linux-4.4.124/Makefile  2018-11-12 13:25:42.255289713 +0000
+@@ -261,6 +261,11 @@
+ UTS_MACHINE    := $(ARCH)
+ SRCARCH    := $(ARCH)
+ 
++# Additional ARCH settings for aarch64
++ifeq ($(ARCH),aarch64)
++        SRCARCH := arm64
++endif
++
+ # Additional ARCH settings for x86
+ ifeq ($(ARCH),i386)
+         SRCARCH := x86
+--- linux-4.4.124.orig/include/net/netfilter/nf_conntrack_extend.h	2018-05-07 05:31:56.000000000 +0000
++++ linux-4.4.124/include/net/netfilter/nf_conntrack_extend.h	2018-11-12 12:08:54.111462632 +0000
+@@ -30,7 +30,8 @@
+ #if IS_ENABLED(CONFIG_NETFILTER_SYNPROXY)
+ 	NF_CT_EXT_SYNPROXY,
+ #endif
+-	NF_CT_EXT_NUM,
++	NF_CT_EXT_CUSTOM,
++	NF_CT_EXT_NUM=NF_CT_EXT_CUSTOM+CONFIG_NF_CONNTRACK_CUSTOM,
+ };
+ 
+ #define NF_CT_EXT_HELPER_TYPE struct nf_conn_help
+@@ -119,5 +120,6 @@
+ };
+ 
+ int nf_ct_extend_register(struct nf_ct_ext_type *type);
++int nf_ct_extend_custom_register(struct nf_ct_ext_type *type,unsigned long int cid);
+ void nf_ct_extend_unregister(struct nf_ct_ext_type *type);
+ #endif /* _NF_CONNTRACK_EXTEND_H */
+--- linux-4.4.124.orig/net/netfilter/Kconfig	2018-05-07 05:31:57.000000000 +0000
++++ linux-4.4.124/net/netfilter/Kconfig	2018-11-12 12:10:37.243458762 +0000
+@@ -81,6 +81,16 @@
+ 
+ 	  If unsure, say 'N'.
+ 
++config NF_CONNTRACK_CUSTOM
++	int "Number of custom extend"
++	range 0 8
++	depends on NETFILTER_ADVANCED
++	default "4"
++	help
++	  This parameter specifies how many custom extensions can be registered.
++
++	  The default value is 4.
++
+ config NF_CONNTRACK_ZONES
+ 	bool  'Connection tracking zones'
+ 	depends on NETFILTER_ADVANCED
+--- linux-4.4.124.orig/net/netfilter/nf_conntrack_extend.c	2018-05-07 05:31:57.000000000 +0000
++++ linux-4.4.124/net/netfilter/nf_conntrack_extend.c	2018-11-12 12:20:01.139437602 +0000
+@@ -163,6 +163,55 @@
+ 	}
+ }
+ 
++
++static unsigned long int nf_ct_ext_cust_id[CONFIG_NF_CONNTRACK_CUSTOM];
++static enum nf_ct_ext_id;
++
++
++enum nf_ct_ext_id nf_ct_extend_get_custom_id(unsigned long int ext_id)
++{
++	enum nf_ct_ext_id ret = 0;
++	int i;
++
++	mutex_lock(&nf_ct_ext_type_mutex);
++	for(i = 0; i < CONFIG_NF_CONNTRACK_CUSTOM; i++) {
++		if(!nf_ct_ext_cust_id[i]) {
++			nf_ct_ext_cust_id[i] = ext_id;
++			ret = i+NF_CT_EXT_CUSTOM;
++			break;
++		}
++		if(nf_ct_ext_cust_id[i] == ext_id) {
++			ret = i+NF_CT_EXT_CUSTOM;
++			break;
++		}
++	}
++	mutex_unlock(&nf_ct_ext_type_mutex);
++
++	return ret;
++}
++
++int nf_ct_extend_custom_register(struct nf_ct_ext_type *type,
++								unsigned long int cid)
++{
++	int ret;
++	enum nf_ct_ext_id new_id = nf_ct_extend_get_custom_id(cid);
++
++	if(!new_id)
++		return -EBUSY;
++
++	type->id = new_id;
++	ret = nf_ct_extend_register(type);
++	if(ret < 0) {
++		mutex_lock(&nf_ct_ext_type_mutex);
++		nf_ct_ext_cust_id[new_id - NF_CT_EXT_CUSTOM] = 0;
++		mutex_unlock(&nf_ct_ext_type_mutex);
++	}
++
++	return ret;
++}
++EXPORT_SYMBOL_GPL(nf_ct_extend_custom_register);
++
++
+ /* This MUST be called in process context. */
+ int nf_ct_extend_register(struct nf_ct_ext_type *type)
+ {
+@@ -186,12 +235,17 @@
+ }
+ EXPORT_SYMBOL_GPL(nf_ct_extend_register);
+ 
++
+ /* This MUST be called in process context. */
+ void nf_ct_extend_unregister(struct nf_ct_ext_type *type)
+ {
+ 	mutex_lock(&nf_ct_ext_type_mutex);
+ 	RCU_INIT_POINTER(nf_ct_ext_types[type->id], NULL);
+ 	update_alloc_size(type);
++
++	if(type->id >= NF_CT_EXT_CUSTOM && type->id < NF_CT_EXT_NUM)
++		nf_ct_ext_cust_id[type->id-NF_CT_EXT_CUSTOM] = 0;
++
+ 	mutex_unlock(&nf_ct_ext_type_mutex);
+ 	synchronize_rcu();
+ }

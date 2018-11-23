@@ -1,0 +1,1520 @@
+Index: linux-4.4.70/drivers/mtd/mtdchar.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/mtdchar.c	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/mtdchar.c	2017-06-27 10:27:30.396351000 +0800
+@@ -465,38 +465,111 @@
+ }
+ 
+ /*
+- * Copies (and truncates, if necessary) data from the larger struct,
+- * nand_ecclayout, to the smaller, deprecated layout struct,
+- * nand_ecclayout_user. This is necessary only to support the deprecated
+- * API ioctl ECCGETLAYOUT while allowing all new functionality to use
+- * nand_ecclayout flexibly (i.e. the struct may change size in new
+- * releases without requiring major rewrites).
++ * Copies (and truncates, if necessary) OOB layout information to the
++ * deprecated layout struct, nand_ecclayout_user. This is necessary only to
++ * support the deprecated API ioctl ECCGETLAYOUT while allowing all new
++ * functionality to use mtd_ooblayout_ops flexibly (i.e. mtd_ooblayout_ops
++ * can describe any kind of OOB layout with almost zero overhead from a
++ * memory usage point of view).
+  */
+-static int shrink_ecclayout(const struct nand_ecclayout *from,
+-		struct nand_ecclayout_user *to)
++static int shrink_ecclayout(struct mtd_info *mtd,
++			    struct nand_ecclayout_user *to)
+ {
+-	int i;
++	struct mtd_oob_region oobregion;
++	int i, section = 0, ret;
+ 
+-	if (!from || !to)
++	if (!mtd || !to)
+ 		return -EINVAL;
+ 
+ 	memset(to, 0, sizeof(*to));
+ 
+-	to->eccbytes = min((int)from->eccbytes, MTD_MAX_ECCPOS_ENTRIES);
+-	for (i = 0; i < to->eccbytes; i++)
+-		to->eccpos[i] = from->eccpos[i];
++	to->eccbytes = 0;
++	for (i = 0; i < MTD_MAX_ECCPOS_ENTRIES;) {
++		u32 eccpos;
++
++		ret = mtd_ooblayout_ecc(mtd, section, &oobregion);
++		if (ret < 0) {
++			if (ret != -ERANGE)
++				return ret;
++
++			break;
++		}
++
++		eccpos = oobregion.offset;
++		for (; i < MTD_MAX_ECCPOS_ENTRIES &&
++		       eccpos < oobregion.offset + oobregion.length; i++) {
++			to->eccpos[i] = eccpos++;
++			to->eccbytes++;
++		}
++	}
+ 
+ 	for (i = 0; i < MTD_MAX_OOBFREE_ENTRIES; i++) {
+-		if (from->oobfree[i].length == 0 &&
+-				from->oobfree[i].offset == 0)
++		ret = mtd_ooblayout_free(mtd, i, &oobregion);
++		if (ret < 0) {
++			if (ret != -ERANGE)
++				return ret;
++
+ 			break;
+-		to->oobavail += from->oobfree[i].length;
+-		to->oobfree[i] = from->oobfree[i];
++		}
++
++		to->oobfree[i].offset = oobregion.offset;
++		to->oobfree[i].length = oobregion.length;
++		to->oobavail += to->oobfree[i].length;
+ 	}
+ 
+ 	return 0;
+ }
+ 
++static int get_oobinfo(struct mtd_info *mtd, struct nand_oobinfo *to)
++{
++	struct mtd_oob_region oobregion;
++	int i, section = 0, ret;
++
++	if (!mtd || !to)
++		return -EINVAL;
++
++	memset(to, 0, sizeof(*to));
++
++	to->eccbytes = 0;
++	for (i = 0; i < ARRAY_SIZE(to->eccpos);) {
++		u32 eccpos;
++
++		ret = mtd_ooblayout_ecc(mtd, section, &oobregion);
++		if (ret < 0) {
++			if (ret != -ERANGE)
++				return ret;
++
++			break;
++		}
++
++		if (oobregion.length + i > ARRAY_SIZE(to->eccpos))
++			return -EINVAL;
++
++		eccpos = oobregion.offset;
++		for (; eccpos < oobregion.offset + oobregion.length; i++) {
++			to->eccpos[i] = eccpos++;
++			to->eccbytes++;
++		}
++	}
++
++	for (i = 0; i < 8; i++) {
++		ret = mtd_ooblayout_free(mtd, i, &oobregion);
++		if (ret < 0) {
++			if (ret != -ERANGE)
++				return ret;
++
++			break;
++		}
++
++		to->oobfree[i][0] = oobregion.offset;
++		to->oobfree[i][1] = oobregion.length;
++	}
++
++	to->useecc = MTD_NANDECC_AUTOPLACE;
++
++	return 0;
++}
++
+ static int mtdchar_blkpg_ioctl(struct mtd_info *mtd,
+ 			       struct blkpg_ioctl_arg *arg)
+ {
+@@ -817,14 +890,10 @@
+ 
+ 		if (!mtd->ooblayout)
+ 			return -EOPNOTSUPP;
+-		if (mtd->ecclayout->eccbytes > ARRAY_SIZE(oi.eccpos))
+-			return -EINVAL;
+ 
+-		oi.useecc = MTD_NANDECC_AUTOPLACE;
+-		memcpy(&oi.eccpos, mtd->ecclayout->eccpos, sizeof(oi.eccpos));
+-		memcpy(&oi.oobfree, mtd->ecclayout->oobfree,
+-		       sizeof(oi.oobfree));
+-		oi.eccbytes = mtd->ecclayout->eccbytes;
++		ret = get_oobinfo(mtd, &oi);
++		if (ret)
++			return ret;
+ 
+ 		if (copy_to_user(argp, &oi, sizeof(struct nand_oobinfo)))
+ 			return -EFAULT;
+@@ -920,7 +989,7 @@
+ 		if (!usrlay)
+ 			return -ENOMEM;
+ 
+-		shrink_ecclayout(mtd->ecclayout, usrlay);
++		shrink_ecclayout(mtd, usrlay);
+ 
+ 		if (copy_to_user(argp, usrlay, sizeof(*usrlay)))
+ 			ret = -EFAULT;
+Index: linux-4.4.70/drivers/mtd/cmdlinepart.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/cmdlinepart.c	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/cmdlinepart.c	2017-06-27 10:27:30.410342000 +0800
+@@ -304,7 +304,7 @@
+  * the first one in the chain if a NULL mtd_id is passed in.
+  */
+ static int parse_cmdline_partitions(struct mtd_info *master,
+-				    struct mtd_partition **pparts,
++				    const struct mtd_partition **pparts,
+ 				    struct mtd_part_parser_data *data)
+ {
+ 	unsigned long long offset;
+@@ -382,7 +382,6 @@
+ __setup("mtdparts=", mtdpart_setup);
+ 
+ static struct mtd_part_parser cmdline_parser = {
+-	.owner = THIS_MODULE,
+ 	.parse_fn = parse_cmdline_partitions,
+ 	.name = "cmdlinepart",
+ };
+Index: linux-4.4.70/drivers/mtd/mtdcore.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/mtdcore.c	2017-06-27 10:27:29.832352000 +0800
++++ linux-4.4.70/drivers/mtd/mtdcore.c	2017-06-27 10:27:30.415337000 +0800
+@@ -32,6 +32,7 @@
+ #include <linux/err.h>
+ #include <linux/ioctl.h>
+ #include <linux/init.h>
++#include <linux/of.h>
+ #include <linux/proc_fs.h>
+ #include <linux/idr.h>
+ #include <linux/backing-dev.h>
+@@ -446,6 +447,7 @@
+ 	mtd->dev.devt = MTD_DEVT(i);
+ 	dev_set_name(&mtd->dev, "mtd%d", i);
+ 	dev_set_drvdata(&mtd->dev, mtd);
++	of_node_get(mtd_get_of_node(mtd));
+ 	error = device_register(&mtd->dev);
+ 	if (error)
+ 		goto fail_added;
+@@ -477,6 +479,7 @@
+ 	return 0;
+ 
+ fail_added:
++	of_node_put(mtd_get_of_node(mtd));
+ 	idr_remove(&mtd_idr, i);
+ fail_locked:
+ 	mutex_unlock(&mtd_table_mutex);
+@@ -518,6 +521,7 @@
+ 		device_unregister(&mtd->dev);
+ 
+ 		idr_remove(&mtd_idr, mtd->index);
++		of_node_put(mtd_get_of_node(mtd));
+ 
+ 		module_put(THIS_MODULE);
+ 		ret = 0;
+@@ -529,9 +533,10 @@
+ }
+ 
+ static int mtd_add_device_partitions(struct mtd_info *mtd,
+-				     struct mtd_partition *real_parts,
+-				     int nbparts)
++				     struct mtd_partitions *parts)
+ {
++	const struct mtd_partition *real_parts = parts->parts;
++	int nbparts = parts->nr_parts;
+ 	int ret;
+ 
+ 	if (nbparts == 0 || IS_ENABLED(CONFIG_MTD_PARTITIONED_MASTER)) {
+@@ -600,29 +605,29 @@
+ 			      const struct mtd_partition *parts,
+ 			      int nr_parts)
+ {
++	struct mtd_partitions parsed;
+ 	int ret;
+-	struct mtd_partition *real_parts = NULL;
+ 
+ 	mtd_set_dev_defaults(mtd);
+ 
+-	ret = parse_mtd_partitions(mtd, types, &real_parts, parser_data);
+-	if (ret <= 0 && nr_parts && parts) {
+-		real_parts = kmemdup(parts, sizeof(*parts) * nr_parts,
+-				     GFP_KERNEL);
+-		if (!real_parts)
+-			ret = -ENOMEM;
+-		else
+-			ret = nr_parts;
+-	}
+-	/* Didn't come up with either parsed OR fallback partitions */
+-	if (ret < 0) {
+-		pr_info("mtd: failed to find partitions; one or more parsers reports errors (%d)\n",
++	memset(&parsed, 0, sizeof(parsed));
++
++	ret = parse_mtd_partitions(mtd, types, &parsed, parser_data);
++	if ((ret < 0 || parsed.nr_parts == 0) && parts && nr_parts) {
++		/* Fall back to driver-provided partitions */
++		parsed = (struct mtd_partitions){
++			.parts		= parts,
++			.nr_parts	= nr_parts,
++		};
++	} else if (ret < 0) {
++		/* Didn't come up with parsed OR fallback partitions */
++			pr_info("mtd: failed to find partitions; one or more parsers reports errors (%d)\n",
+ 			ret);
+ 		/* Don't abort on errors; we can still use unpartitioned MTD */
+-		ret = 0;
++		memset(&parsed, 0, sizeof(parsed));
+ 	}
+ 
+-	ret = mtd_add_device_partitions(mtd, real_parts, ret);
++	ret = mtd_add_device_partitions(mtd, &parsed);
+ 	if (ret)
+ 		goto out;
+ 
+@@ -642,7 +647,8 @@
+ 	}
+ 
+ out:
+-	kfree(real_parts);
++	/* Cleanup any parsed partitions */
++	mtd_part_parser_cleanup(&parsed);
+ 	return ret;
+ }
+ EXPORT_SYMBOL_GPL(mtd_device_parse_register);
+Index: linux-4.4.70/drivers/mtd/mtdcore.h
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/mtdcore.h	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/mtdcore.h	2017-06-27 10:27:30.419334000 +0800
+@@ -10,10 +10,15 @@
+ int del_mtd_device(struct mtd_info *mtd);
+ int add_mtd_partitions(struct mtd_info *, const struct mtd_partition *, int);
+ int del_mtd_partitions(struct mtd_info *);
++
++struct mtd_partitions;
++
+ int parse_mtd_partitions(struct mtd_info *master, const char * const *types,
+-			 struct mtd_partition **pparts,
++			 struct mtd_partitions *pparts,
+ 			 struct mtd_part_parser_data *data);
+ 
++void mtd_part_parser_cleanup(struct mtd_partitions *parts);
++
+ int __init init_mtdchar(void);
+ void __exit cleanup_mtdchar(void);
+ 
+Index: linux-4.4.70/drivers/mtd/mtdpart.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/mtdpart.c	2017-06-27 10:27:29.452360000 +0800
++++ linux-4.4.70/drivers/mtd/mtdpart.c	2017-06-27 10:27:30.424340000 +0800
+@@ -696,11 +696,10 @@
+ 	if (length <= 0)
+ 		return -EINVAL;
+ 
++	memset(&part, 0, sizeof(part));
+ 	part.name = name;
+ 	part.size = length;
+ 	part.offset = offset;
+-	part.mask_flags = 0;
+-	part.ecclayout = NULL;
+ 
+ 	new = allocate_partition(master, &part, -1, offset);
+ 	if (IS_ERR(new))
+@@ -864,7 +863,7 @@
+ static DEFINE_SPINLOCK(part_parser_lock);
+ static LIST_HEAD(part_parsers);
+ 
+-static struct mtd_part_parser *get_partition_parser(const char *name)
++static struct mtd_part_parser *mtd_part_parser_get(const char *name)
+ {
+ 	struct mtd_part_parser *p, *ret = NULL;
+ 
+@@ -881,7 +880,20 @@
+ 	return ret;
+ }
+ 
+-#define put_partition_parser(p) do { module_put((p)->owner); } while (0)
++static inline void mtd_part_parser_put(const struct mtd_part_parser *p)
++{
++	module_put(p->owner);
++}
++
++/*
++ * Many partition parsers just expected the core to kfree() all their data in
++ * one chunk. Do that by default.
++ */
++static void mtd_part_parser_cleanup_default(const struct mtd_partition *pparts,
++					    int nr_parts)
++{
++	kfree(pparts);
++}
+ 
+ static struct mtd_part_parser *
+ get_partition_parser_by_type(enum mtd_parser_type type,
+@@ -893,7 +905,7 @@
+ 
+ 	p = list_prepare_entry(start, &part_parsers, list);
+ 	if (start)
+-		put_partition_parser(start);
++		mtd_part_parser_put(start);
+ 
+ 	list_for_each_entry_continue(p, &part_parsers, list) {
+ 		if (p->type == type && try_module_get(p->owner)) {
+@@ -907,13 +919,19 @@
+ 	return ret;
+ }
+ 
+-void register_mtd_parser(struct mtd_part_parser *p)
+-{
++int __register_mtd_parser(struct mtd_part_parser *p, struct module *owner)
++ {
++	p->owner = owner;
++
++	if (!p->cleanup)
++		p->cleanup = &mtd_part_parser_cleanup_default;
++
+ 	spin_lock(&part_parser_lock);
+ 	list_add(&p->list, &part_parsers);
+ 	spin_unlock(&part_parser_lock);
++	return 0;
+ }
+-EXPORT_SYMBOL_GPL(register_mtd_parser);
++EXPORT_SYMBOL_GPL(__register_mtd_parser);
+ 
+ void deregister_mtd_parser(struct mtd_part_parser *p)
+ {
+@@ -973,7 +991,7 @@
+  * parse_mtd_partitions - parse MTD partitions
+  * @master: the master partition (describes whole MTD device)
+  * @types: names of partition parsers to try or %NULL
+- * @pparts: array of partitions found is returned here
++ * @pparts: info about partitions found is returned here
+  * @data: MTD partition parser-specific data
+  *
+  * This function tries to find partition on MTD device @master. It uses MTD
+@@ -985,45 +1003,42 @@
+  *
+  * This function may return:
+  * o a negative error code in case of failure
+- * o zero if no partitions were found
+- * o a positive number of found partitions, in which case on exit @pparts will
+- *   point to an array containing this number of &struct mtd_info objects.
++ * o zero otherwise, and @pparts will describe the partitions, number of
++ *   partitions, and the parser which parsed them. Caller must release
++ *   resources with mtd_part_parser_cleanup() when finished with the returned
++ *   data.
+  */
+ int parse_mtd_partitions(struct mtd_info *master, const char *const *types,
+-			 struct mtd_partition **pparts,
++			 struct mtd_partitions *pparts,
+ 			 struct mtd_part_parser_data *data)
+ {
+ 	struct mtd_part_parser *parser;
+ 	int ret, err = 0;
+ 	const char *const *types_of = NULL;
+ 
+-	if (data && data->of_node) {
+-		types_of = of_get_probes(data->of_node);
+-		if (types_of != NULL)
+-			types = types_of;
+-	}
+-
+ 	if (!types)
+ 		types = default_mtd_part_types;
+ 
+ 	for ( ; *types; types++) {
+ 		pr_debug("%s: parsing partitions %s\n", master->name, *types);
+-		parser = get_partition_parser(*types);
++		parser = mtd_part_parser_get(*types);
+ 		if (!parser && !request_module("%s", *types))
+-			parser = get_partition_parser(*types);
++			parser = mtd_part_parser_get(*types);
+ 		pr_debug("%s: got parser %s\n", master->name,
+ 			 parser ? parser->name : NULL);
+ 		if (!parser)
+ 			continue;
+-		ret = (*parser->parse_fn)(master, pparts, data);
++		ret = (*parser->parse_fn)(master, &pparts->parts, data);
+ 		pr_debug("%s: parser %s: %i\n",
+ 			 master->name, parser->name, ret);
+-		put_partition_parser(parser);
+ 		if (ret > 0) {
+ 			printk(KERN_NOTICE "%d %s partitions found on MTD device %s\n",
+ 			       ret, parser->name, master->name);
+-			return ret;
++			pparts->nr_parts = ret;
++			pparts->parser = parser;
++			return 0;
+ 		}
++		mtd_part_parser_put(parser);
+ 		/*
+ 		 * Stash the first error we see; only report it if no parser
+ 		 * succeeds
+@@ -1053,7 +1068,7 @@
+ 		ret = (*parser->parse_fn)(master, pparts, data);
+ 
+ 		if (ret > 0) {
+-			put_partition_parser(parser);
++			mtd_part_parser_put(parser);
+ 			printk(KERN_NOTICE
+ 			       "%d %s partitions found on MTD device %s\n",
+ 			       ret, parser->name, master->name);
+@@ -1067,6 +1082,22 @@
+ }
+ EXPORT_SYMBOL_GPL(parse_mtd_partitions_by_type);
+ 
++void mtd_part_parser_cleanup(struct mtd_partitions *parts)
++{
++	const struct mtd_part_parser *parser;
++
++	if (!parts)
++		return;
++
++	parser = parts->parser;
++	if (parser) {
++		if (parser->cleanup)
++			parser->cleanup(parts->parts, parts->nr_parts);
++
++		mtd_part_parser_put(parser);
++	}
++}
++
+ int mtd_is_partition(const struct mtd_info *mtd)
+ {
+ 	struct mtd_part *part;
+@@ -1089,7 +1120,7 @@
+ 	if (!mtd_is_partition(mtd))
+ 		return (struct mtd_info *)mtd;
+ 
+-	return PART(mtd)->master;
++	return mtd_to_part(mtd)->master;
+ }
+ EXPORT_SYMBOL_GPL(mtdpart_get_master);
+ 
+@@ -1098,7 +1129,7 @@
+ 	if (!mtd_is_partition(mtd))
+ 		return 0;
+ 
+-	return PART(mtd)->offset;
++	return mtd_to_part(mtd)->offset;
+ }
+ EXPORT_SYMBOL_GPL(mtdpart_get_offset);
+ 
+Index: linux-4.4.70/drivers/mtd/mtdswap.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/mtdswap.c	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/mtdswap.c	2017-06-27 10:27:30.429336000 +0800
+@@ -1417,7 +1417,6 @@
+ 	unsigned long part;
+ 	unsigned int eblocks, eavailable, bad_blocks, spare_cnt;
+ 	uint64_t swap_size, use_size, size_limit;
+-	struct nand_ecclayout *oinfo;
+ 	int ret;
+ 
+ 	parts = &partitions[0];
+@@ -1447,13 +1446,6 @@
+ 		return;
+ 	}
+ 
+-	oinfo = mtd->ecclayout;
+-	if (!oinfo) {
+-		printk(KERN_ERR "%s: mtd%d does not have OOB\n",
+-			MTDSWAP_PREFIX, mtd->index);
+-		return;
+-	}
+-
+ 	if (!mtd->oobsize || mtd->oobavail < MTDSWAP_OOBSIZE) {
+ 		printk(KERN_ERR "%s: Not enough free bytes in OOB, "
+ 			"%d available, %zu needed.\n",
+Index: linux-4.4.70/drivers/mtd/nand/Kconfig
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/nand/Kconfig	2017-05-24 10:19:54.000000000 +0800
++++ linux-4.4.70/drivers/mtd/nand/Kconfig	2017-06-27 10:27:30.441343000 +0800
+@@ -62,7 +62,7 @@
+ config MTD_NAND_DENALI_DT
+ 	tristate "Support Denali NAND controller as a DT device"
+ 	select MTD_NAND_DENALI
+-	depends on HAS_DMA && HAVE_CLK
++	depends on HAS_DMA && HAVE_CLK && OF
+ 	help
+ 	  Enable the driver for NAND flash on platforms using a Denali NAND
+ 	  controller as a DT device.
+@@ -81,6 +81,7 @@
+ config MTD_NAND_GPIO
+ 	tristate "GPIO assisted NAND Flash driver"
+ 	depends on GPIOLIB || COMPILE_TEST
++	depends on HAS_IOMEM
+ 	help
+ 	  This enables a NAND flash driver where control signals are
+ 	  connected to GPIO pins, and commands and data are communicated
+@@ -314,6 +315,7 @@
+ config MTD_NAND_CS553X
+ 	tristate "NAND support for CS5535/CS5536 (AMD Geode companion chip)"
+ 	depends on X86_32
++	depends on !UML && HAS_IOMEM
+ 	help
+ 	  The CS553x companion chips for the AMD Geode processor
+ 	  include NAND flash controllers with built-in hardware ECC
+@@ -467,6 +469,7 @@
+ config MTD_NAND_VF610_NFC
+ 	tristate "Support for Freescale NFC for VF610/MPC5125"
+ 	depends on (SOC_VF610 || COMPILE_TEST)
++	depends on HAS_IOMEM
+ 	help
+ 	  Enables support for NAND Flash Controller on some Freescale
+ 	  processors like the VF610, MPC5125, MCF54418 or Kinetis K70.
+@@ -484,7 +487,7 @@
+ 
+ config MTD_NAND_SH_FLCTL
+ 	tristate "Support for NAND on Renesas SuperH FLCTL"
+-	depends on SUPERH || ARCH_SHMOBILE || COMPILE_TEST
++	depends on SUPERH || COMPILE_TEST
+ 	depends on HAS_IOMEM
+ 	depends on HAS_DMA
+ 	help
+Index: linux-4.4.70/drivers/mtd/nand/nand_bbt.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/nand/nand_bbt.c	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/nand/nand_bbt.c	2017-06-27 10:27:30.447343000 +0800
+@@ -1373,5 +1373,3 @@
+ 
+ 	return ret;
+ }
+-
+-EXPORT_SYMBOL(nand_scan_bbt);
+Index: linux-4.4.70/drivers/mtd/nand/nand_bch.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/nand/nand_bch.c	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/nand/nand_bch.c	2017-06-27 10:27:30.451341000 +0800
+@@ -32,13 +32,11 @@
+ /**
+  * struct nand_bch_control - private NAND BCH control structure
+  * @bch:       BCH control structure
+- * @ecclayout: private ecc layout for this BCH configuration
+  * @errloc:    error location array
+  * @eccmask:   XOR ecc mask, allows erased pages to be decoded as valid
+  */
+ struct nand_bch_control {
+ 	struct bch_control   *bch;
+-	struct nand_ecclayout ecclayout;
+ 	unsigned int         *errloc;
+ 	unsigned char        *eccmask;
+ };
+@@ -124,7 +122,6 @@
+ {
+ 	struct nand_chip *nand = mtd_to_nand(mtd);
+ 	unsigned int m, t, eccsteps, i;
+-	struct nand_ecclayout *layout = nand->ecc.layout;
+ 	struct nand_bch_control *nbc = NULL;
+ 	unsigned char *erased_page;
+ 	unsigned int eccsize = nand->ecc.size;
+@@ -162,7 +159,7 @@
+ 	eccsteps = mtd->writesize/eccsize;
+ 
+ 	/* if no ecc placement scheme was provided, build one */
+-	if (!layout) {
++	if (!mtd->ooblayout) {
+ 
+ 		/* handle large page devices only */
+ 		if (mtd->oobsize < 64) {
+@@ -171,24 +168,7 @@
+ 			goto fail;
+ 		}
+ 
+-		layout = &nbc->ecclayout;
+-		layout->eccbytes = eccsteps*eccbytes;
+-
+-		/* reserve 2 bytes for bad block marker */
+-		if (layout->eccbytes+2 > mtd->oobsize) {
+-			printk(KERN_WARNING "no suitable oob scheme available "
+-			       "for oobsize %d eccbytes %u\n", mtd->oobsize,
+-			       eccbytes);
+-			goto fail;
+-		}
+-		/* put ecc bytes at oob tail */
+-		for (i = 0; i < layout->eccbytes; i++)
+-			layout->eccpos[i] = mtd->oobsize-layout->eccbytes+i;
+-
+-		layout->oobfree[0].offset = 2;
+-		layout->oobfree[0].length = mtd->oobsize-2-layout->eccbytes;
+-
+-		nand->ecc.layout = layout;
++		mtd_set_ooblayout(mtd, &nand_ooblayout_lp_ops);
+ 	}
+ 
+ 	/* sanity checks */
+Index: linux-4.4.70/drivers/mtd/nand/nand_ids.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/nand/nand_ids.c	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/nand/nand_ids.c	2017-06-27 10:27:30.454348000 +0800
+@@ -50,8 +50,8 @@
+ 		  SZ_16K, SZ_8K, SZ_4M, 0, 6, 1280, NAND_ECC_INFO(40, SZ_1K) },
+ 	{"H27UCG8T2ATR-BC 64G 3.3V 8-bit",
+ 		{ .id = {0xad, 0xde, 0x94, 0xda, 0x74, 0xc4} },
+-		  SZ_8K, SZ_8K, SZ_2M, 0, 6, 640, NAND_ECC_INFO(40, SZ_1K),
+-		  4 },
++		  SZ_8K, SZ_8K, SZ_2M, NAND_NEED_SCRAMBLING, 6, 640,
++		  NAND_ECC_INFO(40, SZ_1K), 4 },
+ 
+ 	LEGACY_ID_NAND("NAND 4MiB 5V 8-bit",   0x6B, 4, SZ_8K, SP_OPTIONS),
+ 	LEGACY_ID_NAND("NAND 4MiB 3,3V 8-bit", 0xE3, 4, SZ_8K, SP_OPTIONS),
+Index: linux-4.4.70/drivers/mtd/spi-nor/Kconfig
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/spi-nor/Kconfig	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/spi-nor/Kconfig	2017-06-27 10:27:30.458340000 +0800
+@@ -9,6 +9,7 @@
+ 
+ config MTD_MT81xx_NOR
+ 	tristate "Mediatek MT81xx SPI NOR flash controller"
++	depends on HAS_IOMEM
+ 	help
+ 	  This enables access to SPI NOR flash, using MT81xx SPI NOR flash
+ 	  controller. This controller does not support generic SPI BUS, it only
+@@ -30,7 +31,7 @@
+ 
+ config SPI_FSL_QUADSPI
+ 	tristate "Freescale Quad SPI controller"
+-	depends on ARCH_MXC || COMPILE_TEST
++	depends on ARCH_MXC || SOC_LS1021A || ARCH_LAYERSCAPE || COMPILE_TEST
+ 	depends on HAS_IOMEM
+ 	help
+ 	  This enables support for the Quad SPI controller in master mode.
+Index: linux-4.4.70/drivers/mtd/spi-nor/spi-nor.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/spi-nor/spi-nor.c	2017-06-27 10:27:29.784356000 +0800
++++ linux-4.4.70/drivers/mtd/spi-nor/spi-nor.c	2017-06-27 10:27:30.465343000 +0800
+@@ -61,14 +61,20 @@
+ 	u16		addr_width;
+ 
+ 	u16		flags;
+-#define	SECT_4K			0x01	/* SPINOR_OP_BE_4K works uniformly */
+-#define	SPI_NOR_NO_ERASE	0x02	/* No erase command needed */
+-#define	SST_WRITE		0x04	/* use SST byte programming */
+-#define	SPI_NOR_NO_FR		0x08	/* Can't do fastread */
+-#define	SECT_4K_PMC		0x10	/* SPINOR_OP_BE_4K_PMC works uniformly */
+-#define	SPI_NOR_DUAL_READ	0x20    /* Flash supports Dual Read */
+-#define	SPI_NOR_QUAD_READ	0x40    /* Flash supports Quad Read */
+-#define	USE_FSR			0x80	/* use flag status register */
++#define SECT_4K			BIT(0)	/* SPINOR_OP_BE_4K works uniformly */
++#define SPI_NOR_NO_ERASE	BIT(1)	/* No erase command needed */
++#define SST_WRITE		BIT(2)	/* use SST byte programming */
++#define SPI_NOR_NO_FR		BIT(3)	/* Can't do fastread */
++#define SECT_4K_PMC		BIT(4)	/* SPINOR_OP_BE_4K_PMC works uniformly */
++#define SPI_NOR_DUAL_READ	BIT(5)	/* Flash supports Dual Read */
++#define SPI_NOR_QUAD_READ	BIT(6)	/* Flash supports Quad Read */
++#define USE_FSR			BIT(7)	/* use flag status register */
++#define SPI_NOR_HAS_LOCK	BIT(8)	/* Flash supports lock/unlock via SR */
++#define SPI_NOR_HAS_TB		BIT(9)	/*
++					 * Flash SR has Top/Bottom (TB) protect
++					 * bit. Must be used with
++					 * SPI_NOR_HAS_LOCK.
++					 */
+ };
+ 
+ #define JEDEC_MFR(info)	((info)->id[0])
+@@ -410,17 +416,13 @@
+ 
+ 	write_disable(nor);
+ 
++erase_err:
+ 	spi_nor_unlock_and_unprep(nor, SPI_NOR_OPS_ERASE);
+ 
+-	instr->state = MTD_ERASE_DONE;
++	instr->state = ret ? MTD_ERASE_FAILED : MTD_ERASE_DONE;
+ 	mtd_erase_callback(instr);
+ 
+ 	return ret;
+-
+-erase_err:
+-	spi_nor_unlock_and_unprep(nor, SPI_NOR_OPS_ERASE);
+-	instr->state = MTD_ERASE_FAILED;
+-	return ret;
+ }
+ 
+ static void stm_get_locked_range(struct spi_nor *nor, u8 sr, loff_t *ofs,
+@@ -438,32 +440,58 @@
+ 	} else {
+ 		pow = ((sr & mask) ^ mask) >> shift;
+ 		*len = mtd->size >> pow;
+-		*ofs = mtd->size - *len;
++		if (nor->flags & SNOR_F_HAS_SR_TB && sr & SR_TB)
++			*ofs = 0;
++		else
++			*ofs = mtd->size - *len;
+ 	}
+ }
+ 
+ /*
+- * Return 1 if the entire region is locked, 0 otherwise
++ * Return 1 if the entire region is locked (if @locked is true) or unlocked (if
++ * @locked is false); 0 otherwise
+  */
+-static int stm_is_locked_sr(struct spi_nor *nor, loff_t ofs, uint64_t len,
+-			    u8 sr)
++static int stm_check_lock_status_sr(struct spi_nor *nor, loff_t ofs, uint64_t len,
++				    u8 sr, bool locked)
+ {
+ 	loff_t lock_offs;
+ 	uint64_t lock_len;
+ 
++	if (!len)
++		return 1;
++
+ 	stm_get_locked_range(nor, sr, &lock_offs, &lock_len);
+ 
+-	return (ofs + len <= lock_offs + lock_len) && (ofs >= lock_offs);
++	if (locked)
++		/* Requested range is a sub-range of locked range */
++		return (ofs + len <= lock_offs + lock_len) && (ofs >= lock_offs);
++	else
++		/* Requested range does not overlap with locked range */
++		return (ofs >= lock_offs + lock_len) || (ofs + len <= lock_offs);
++}
++
++static int stm_is_locked_sr(struct spi_nor *nor, loff_t ofs, uint64_t len,
++			    u8 sr)
++{
++	return stm_check_lock_status_sr(nor, ofs, len, sr, true);
++}
++
++static int stm_is_unlocked_sr(struct spi_nor *nor, loff_t ofs, uint64_t len,
++			      u8 sr)
++{
++	return stm_check_lock_status_sr(nor, ofs, len, sr, false);
+ }
+ 
+ /*
+  * Lock a region of the flash. Compatible with ST Micro and similar flash.
+- * Supports only the block protection bits BP{0,1,2} in the status register
++ * Supports the block protection bits BP{0,1,2} in the status register
+  * (SR). Does not support these features found in newer SR bitfields:
+- *   - TB: top/bottom protect - only handle TB=0 (top protect)
+  *   - SEC: sector/block protect - only handle SEC=0 (block protect)
+  *   - CMP: complement protect - only support CMP=0 (range is not complemented)
+  *
++ * Support for the following is provided conditionally for some flash:
++ *   - TB: top/bottom protect
++ *
+  * Sample table portion for 8MB flash (Winbond w25q64fw):
+  *
+  *   SEC  |  TB   |  BP2  |  BP1  |  BP0  |  Prot Length  | Protected Portion
+@@ -476,26 +504,55 @@
+  *    0   |   0   |   1   |   0   |   1   |  2 MB         | Upper 1/4
+  *    0   |   0   |   1   |   1   |   0   |  4 MB         | Upper 1/2
+  *    X   |   X   |   1   |   1   |   1   |  8 MB         | ALL
++ *  ------|-------|-------|-------|-------|---------------|-------------------
++ *    0   |   1   |   0   |   0   |   1   |  128 KB       | Lower 1/64
++ *    0   |   1   |   0   |   1   |   0   |  256 KB       | Lower 1/32
++ *    0   |   1   |   0   |   1   |   1   |  512 KB       | Lower 1/16
++ *    0   |   1   |   1   |   0   |   0   |  1 MB         | Lower 1/8
++ *    0   |   1   |   1   |   0   |   1   |  2 MB         | Lower 1/4
++ *    0   |   1   |   1   |   1   |   0   |  4 MB         | Lower 1/2
+  *
+  * Returns negative on errors, 0 on success.
+  */
+ static int stm_lock(struct spi_nor *nor, loff_t ofs, uint64_t len)
+ {
+ 	struct mtd_info *mtd = &nor->mtd;
+-	u8 status_old, status_new;
++	int status_old, status_new;
+ 	u8 mask = SR_BP2 | SR_BP1 | SR_BP0;
+ 	u8 shift = ffs(mask) - 1, pow, val;
++	loff_t lock_len;
++	bool can_be_top = true, can_be_bottom = nor->flags & SNOR_F_HAS_SR_TB;
++	bool use_top;
++	int ret;
+ 
+ 	status_old = read_sr(nor);
++	if (status_old < 0)
++		return status_old;
+ 
+-	/* SPI NOR always locks to the end */
+-	if (ofs + len != mtd->size) {
+-		/* Does combined region extend to end? */
+-		if (!stm_is_locked_sr(nor, ofs + len, mtd->size - ofs - len,
+-				      status_old))
+-			return -EINVAL;
+-		len = mtd->size - ofs;
+-	}
++	/* If nothing in our range is unlocked, we don't need to do anything */
++	if (stm_is_locked_sr(nor, ofs, len, status_old))
++		return 0;
++
++	/* If anything below us is unlocked, we can't use 'bottom' protection */
++	if (!stm_is_locked_sr(nor, 0, ofs, status_old))
++		can_be_bottom = false;
++
++	/* If anything above us is unlocked, we can't use 'top' protection */
++	if (!stm_is_locked_sr(nor, ofs + len, mtd->size - (ofs + len),
++				status_old))
++		can_be_top = false;
++
++	if (!can_be_bottom && !can_be_top)
++		return -EINVAL;
++
++	/* Prefer top, if both are valid */
++	use_top = can_be_top;
++
++	/* lock_len: length of region that should end up locked */
++	if (use_top)
++		lock_len = mtd->size - ofs;
++	else
++		lock_len = ofs + len;
+ 
+ 	/*
+ 	 * Need smallest pow such that:
+@@ -506,7 +563,7 @@
+ 	 *
+ 	 *   pow = ceil(log2(size / len)) = log2(size) - floor(log2(len))
+ 	 */
+-	pow = ilog2(mtd->size) - ilog2(len);
++	pow = ilog2(mtd->size) - ilog2(lock_len);
+ 	val = mask - (pow << shift);
+ 	if (val & ~mask)
+ 		return -EINVAL;
+@@ -514,14 +571,27 @@
+ 	if (!(val & mask))
+ 		return -EINVAL;
+ 
+-	status_new = (status_old & ~mask) | val;
++	status_new = (status_old & ~mask & ~SR_TB) | val;
++
++	/* Disallow further writes if WP pin is asserted */
++	status_new |= SR_SRWD;
++
++	if (!use_top)
++		status_new |= SR_TB;
++
++	/* Don't bother if they're the same */
++	if (status_new == status_old)
++		return 0;
+ 
+ 	/* Only modify protection if it will not unlock other areas */
+-	if ((status_new & mask) <= (status_old & mask))
++	if ((status_new & mask) < (status_old & mask))
+ 		return -EINVAL;
+ 
+ 	write_enable(nor);
+-	return write_sr(nor, status_new);
++	ret = write_sr(nor, status_new);
++	if (ret)
++		return ret;
++	return spi_nor_wait_till_ready(nor);
+ }
+ 
+ /*
+@@ -532,17 +602,43 @@
+ static int stm_unlock(struct spi_nor *nor, loff_t ofs, uint64_t len)
+ {
+ 	struct mtd_info *mtd = &nor->mtd;
+-	uint8_t status_old, status_new;
++	int status_old, status_new;
+ 	u8 mask = SR_BP2 | SR_BP1 | SR_BP0;
+ 	u8 shift = ffs(mask) - 1, pow, val;
++	loff_t lock_len;
++	bool can_be_top = true, can_be_bottom = nor->flags & SNOR_F_HAS_SR_TB;
++	bool use_top;
++	int ret;
+ 
+ 	status_old = read_sr(nor);
++	if (status_old < 0)
++		return status_old;
+ 
+-	/* Cannot unlock; would unlock larger region than requested */
+-	if (stm_is_locked_sr(nor, ofs - mtd->erasesize, mtd->erasesize,
+-			     status_old))
++	/* If nothing in our range is locked, we don't need to do anything */
++	if (stm_is_unlocked_sr(nor, ofs, len, status_old))
++		return 0;
++
++	/* If anything below us is locked, we can't use 'top' protection */
++	if (!stm_is_unlocked_sr(nor, 0, ofs, status_old))
++		can_be_top = false;
++
++	/* If anything above us is locked, we can't use 'bottom' protection */
++	if (!stm_is_unlocked_sr(nor, ofs + len, mtd->size - (ofs + len),
++				status_old))
++		can_be_bottom = false;
++
++	if (!can_be_bottom && !can_be_top)
+ 		return -EINVAL;
+ 
++	/* Prefer top, if both are valid */
++	use_top = can_be_top;
++
++	/* lock_len: length of region that should remain locked */
++	if (use_top)
++		lock_len = mtd->size - (ofs + len);
++	else
++		lock_len = ofs;
++
+ 	/*
+ 	 * Need largest pow such that:
+ 	 *
+@@ -552,8 +648,8 @@
+ 	 *
+ 	 *   pow = floor(log2(size / len)) = log2(size) - ceil(log2(len))
+ 	 */
+-	pow = ilog2(mtd->size) - order_base_2(mtd->size - (ofs + len));
+-	if (ofs + len == mtd->size) {
++	pow = ilog2(mtd->size) - order_base_2(lock_len);
++	if (lock_len == 0) {
+ 		val = 0; /* fully unlocked */
+ 	} else {
+ 		val = mask - (pow << shift);
+@@ -562,14 +658,28 @@
+ 			return -EINVAL;
+ 	}
+ 
+-	status_new = (status_old & ~mask) | val;
++	status_new = (status_old & ~mask & ~SR_TB) | val;
++
++	/* Don't protect status register if we're fully unlocked */
++	if (lock_len == mtd->size)
++		status_new &= ~SR_SRWD;
++
++	if (!use_top)
++		status_new |= SR_TB;
++
++	/* Don't bother if they're the same */
++	if (status_new == status_old)
++		return 0;
+ 
+ 	/* Only modify protection if it will not lock other areas */
+-	if ((status_new & mask) >= (status_old & mask))
++	if ((status_new & mask) > (status_old & mask))
+ 		return -EINVAL;
+ 
+ 	write_enable(nor);
+-	return write_sr(nor, status_new);
++	ret = write_sr(nor, status_new);
++	if (ret)
++		return ret;
++	return spi_nor_wait_till_ready(nor);
+ }
+ 
+ /*
+@@ -705,12 +815,13 @@
+ 	{ "en25q32b",   INFO(0x1c3016, 0, 64 * 1024,   64, 0) },
+ 	{ "en25p64",    INFO(0x1c2017, 0, 64 * 1024,  128, 0) },
+ 	{ "en25q64",    INFO(0x1c3017, 0, 64 * 1024,  128, SECT_4K) },
++	{ "en25q128",   INFO(0x1c3018, 0, 64 * 1024,  256, SECT_4K) },
+ 	{ "en25qh128",  INFO(0x1c7018, 0, 64 * 1024,  256, 0) },
+ 	{ "en25qh256",  INFO(0x1c7019, 0, 64 * 1024,  512, 0) },
+ 	{ "en25s64",	INFO(0x1c3817, 0, 64 * 1024,  128, SECT_4K) },
+ 
+ 	/* ESMT */
+-	{ "f25l32pa", INFO(0x8c2016, 0, 64 * 1024, 64, SECT_4K) },
++	{ "f25l32pa", INFO(0x8c2016, 0, 64 * 1024, 64, SECT_4K | SPI_NOR_HAS_LOCK) },
+ 	{ "f25l32qa", INFO(0x8c4116, 0, 64 * 1024, 64, SECT_4K) },
+ 	{ "f25l64qa", INFO(0x8c4117, 0, 64 * 1024, 128, SECT_4K) },
+ 
+@@ -740,9 +851,10 @@
+ 	{ "mx25l4005a",  INFO(0xc22013, 0, 64 * 1024,   8, SECT_4K) },
+ 	{ "mx25l8005",   INFO(0xc22014, 0, 64 * 1024,  16, 0) },
+ 	{ "mx25l1606e",  INFO(0xc22015, 0, 64 * 1024,  32, SECT_4K) },
+-	{ "mx25l3205d",  INFO(0xc22016, 0, 64 * 1024,  64, 0) },
++	{ "mx25l3205d",  INFO(0xc22016, 0, 64 * 1024,  64, SECT_4K) },
+ 	{ "mx25l3255e",  INFO(0xc29e16, 0, 64 * 1024,  64, SECT_4K) },
+-	{ "mx25l6405d",  INFO(0xc22017, 0, 64 * 1024, 128, 0) },
++	{ "mx25l6405d",  INFO(0xc22017, 0, 64 * 1024, 128, SECT_4K) },
++	{ "mx25u3235f",	 INFO(0xc22536, 0, 64 * 1024, 64, 0) },
+ 	{ "mx25u6435f",  INFO(0xc22537, 0, 64 * 1024, 128, SECT_4K) },
+ 	{ "mx25l12805d", INFO(0xc22018, 0, 64 * 1024, 256, 0) },
+ 	{ "mx25l12855e", INFO(0xc22618, 0, 64 * 1024, 256, 0) },
+@@ -757,8 +869,8 @@
+ 	{ "n25q032a",	 INFO(0x20bb16, 0, 64 * 1024,   64, SPI_NOR_QUAD_READ) },
+ 	{ "n25q064",     INFO(0x20ba17, 0, 64 * 1024,  128, SECT_4K | SPI_NOR_QUAD_READ) },
+ 	{ "n25q064a",    INFO(0x20bb17, 0, 64 * 1024,  128, SECT_4K | SPI_NOR_QUAD_READ) },
+-	{ "n25q128a11",  INFO(0x20bb18, 0, 64 * 1024,  256, SPI_NOR_QUAD_READ) },
+-	{ "n25q128a13",  INFO(0x20ba18, 0, 64 * 1024,  256, SPI_NOR_QUAD_READ) },
++	{ "n25q128a11",  INFO(0x20bb18, 0, 64 * 1024,  256, SECT_4K | SPI_NOR_QUAD_READ) },
++	{ "n25q128a13",  INFO(0x20ba18, 0, 64 * 1024,  256, SECT_4K | SPI_NOR_QUAD_READ) },
+ 	{ "n25q256a",    INFO(0x20ba19, 0, 64 * 1024,  512, SECT_4K | SPI_NOR_QUAD_READ) },
+ 	{ "n25q512a",    INFO(0x20bb20, 0, 64 * 1024, 1024, SECT_4K | USE_FSR | SPI_NOR_QUAD_READ) },
+ 	{ "n25q512ax3",  INFO(0x20ba20, 0, 64 * 1024, 1024, SECT_4K | USE_FSR | SPI_NOR_QUAD_READ) },
+@@ -792,6 +904,7 @@
+ 	{ "s25fl008k",  INFO(0xef4014,      0,  64 * 1024,  16, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
+ 	{ "s25fl016k",  INFO(0xef4015,      0,  64 * 1024,  32, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
+ 	{ "s25fl064k",  INFO(0xef4017,      0,  64 * 1024, 128, SECT_4K) },
++	{ "s25fl116k",  INFO(0x014015,      0,  64 * 1024,  32, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
+ 	{ "s25fl132k",  INFO(0x014016,      0,  64 * 1024,  64, SECT_4K) },
+ 	{ "s25fl164k",  INFO(0x014017,      0,  64 * 1024, 128, SECT_4K) },
+ 	{ "s25fl204k",  INFO(0x014013,      0,  64 * 1024,   8, SECT_4K | SPI_NOR_DUAL_READ) },
+@@ -855,11 +968,23 @@
+ 	{ "w25x16", INFO(0xef3015, 0, 64 * 1024,  32, SECT_4K) },
+ 	{ "w25x32", INFO(0xef3016, 0, 64 * 1024,  64, SECT_4K) },
+ 	{ "w25q32", INFO(0xef4016, 0, 64 * 1024,  64, SECT_4K) },
+-	{ "w25q32dw", INFO(0xef6016, 0, 64 * 1024,  64, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
++	{
++		"w25q32dw", INFO(0xef6016, 0, 64 * 1024,  64,
++			SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ |
++			SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB)
++	},
+ 	{ "w25x64", INFO(0xef3017, 0, 64 * 1024, 128, SECT_4K) },
+ 	{ "w25q64", INFO(0xef4017, 0, 64 * 1024, 128, SECT_4K) },
+-	{ "w25q64dw", INFO(0xef6017, 0, 64 * 1024, 128, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
+-	{ "w25q128fw", INFO(0xef6018, 0, 64 * 1024, 256, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
++	{
++		"w25q64dw", INFO(0xef6017, 0, 64 * 1024, 128,
++			SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ |
++			SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB)
++	},
++	{
++		"w25q128fw", INFO(0xef6018, 0, 64 * 1024, 256,
++			SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ |
++			SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB)
++	},
+ 	{ "w25q80", INFO(0xef5014, 0, 64 * 1024,  16, SECT_4K) },
+ 	{ "w25q80bl", INFO(0xef4014, 0, 64 * 1024,  16, SECT_4K) },
+ 	{ "w25q128", INFO(0xef4018, 0, 64 * 1024, 256, SECT_4K) },
+@@ -882,7 +1007,7 @@
+ 
+ 	tmp = nor->read_reg(nor, SPINOR_OP_RDID, id, SPI_NOR_MAX_ID_LEN);
+ 	if (tmp < 0) {
+-		dev_dbg(nor->dev, " error %d reading JEDEC ID\n", tmp);
++		dev_dbg(nor->dev, "error %d reading JEDEC ID\n", tmp);
+ 		return ERR_PTR(tmp);
+ 	}
+ 
+@@ -893,7 +1018,7 @@
+ 				return &spi_nor_ids[tmp];
+ 		}
+ 	}
+-	dev_err(nor->dev, "unrecognized JEDEC id bytes: %02x, %2x, %2x\n",
++	dev_err(nor->dev, "unrecognized JEDEC id bytes: %02x, %02x, %02x\n",
+ 		id[0], id[1], id[2]);
+ 	return ERR_PTR(-ENODEV);
+ }
+@@ -1039,6 +1164,8 @@
+ 	int ret, val;
+ 
+ 	val = read_sr(nor);
++	if (val < 0)
++		return val;
+ 	write_enable(nor);
+ 
+ 	write_sr(nor, val | SR_QUAD_EN_MX);
+@@ -1133,7 +1260,7 @@
+ 	const struct flash_info *info = NULL;
+ 	struct device *dev = nor->dev;
+ 	struct mtd_info *mtd = &nor->mtd;
+-	struct device_node *np = nor->flash_node;
++	struct device_node *np = spi_nor_get_flash_node(nor);
+ 	int ret;
+ 	int i;
+ 
+@@ -1182,9 +1309,12 @@
+ 
+ 	if (JEDEC_MFR(info) == SNOR_MFR_ATMEL ||
+ 	    JEDEC_MFR(info) == SNOR_MFR_INTEL ||
+-	    JEDEC_MFR(info) == SNOR_MFR_SST) {
++	    JEDEC_MFR(info) == SNOR_MFR_MACRONIX ||
++	    JEDEC_MFR(info) == SNOR_MFR_SST ||
++	    info->flags & SPI_NOR_HAS_LOCK) {
+ 		write_enable(nor);
+ 		write_sr(nor, 0);
++		spi_nor_wait_till_ready(nor);
+ 	}
+ 
+ 	if (!mtd->name)
+@@ -1198,7 +1328,8 @@
+ 	mtd->_read = spi_nor_read;
+ 
+ 	/* NOR protection support for STmicro/Micron chips and similar */
+-	if (JEDEC_MFR(info) == SNOR_MFR_MICRON) {
++	if (JEDEC_MFR(info) == SNOR_MFR_MICRON ||
++		info->flags & SPI_NOR_HAS_LOCK) {
+ 		nor->flash_lock = stm_lock;
+ 		nor->flash_unlock = stm_unlock;
+ 		nor->flash_is_locked = stm_is_locked;
+@@ -1218,6 +1349,8 @@
+ 
+ 	if (info->flags & USE_FSR)
+ 		nor->flags |= SNOR_F_USE_FSR;
++	if (info->flags & SPI_NOR_HAS_TB)
++		nor->flags |= SNOR_F_HAS_SR_TB;
+ 
+ #ifdef CONFIG_MTD_SPI_NOR_USE_4K_SECTORS
+ 	/* prefer "small sector" erase if possible */
+Index: linux-4.4.70/drivers/mtd/tests/mtd_nandecctest.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/tests/mtd_nandecctest.c	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/tests/mtd_nandecctest.c	2017-06-27 10:27:30.469336000 +0800
+@@ -187,7 +187,7 @@
+ 	__nand_calculate_ecc(error_data, size, calc_ecc);
+ 	ret = __nand_correct_data(error_data, error_ecc, calc_ecc, size);
+ 
+-	return (ret == -1) ? 0 : -EINVAL;
++	return (ret == -EBADMSG) ? 0 : -EINVAL;
+ }
+ 
+ static const struct nand_ecc_test nand_ecc_test[] = {
+Index: linux-4.4.70/drivers/mtd/tests/pagetest.c
+===================================================================
+--- linux-4.4.70.orig/drivers/mtd/tests/pagetest.c	2017-03-21 16:12:30.000000000 +0800
++++ linux-4.4.70/drivers/mtd/tests/pagetest.c	2017-06-27 10:27:30.474351000 +0800
+@@ -127,13 +127,12 @@
+ 	unsigned char *pp1, *pp2, *pp3, *pp4;
+ 
+ 	pr_info("crosstest\n");
+-	pp1 = kmalloc(pgsize * 4, GFP_KERNEL);
++	pp1 = kzalloc(pgsize * 4, GFP_KERNEL);
+ 	if (!pp1)
+ 		return -ENOMEM;
+ 	pp2 = pp1 + pgsize;
+ 	pp3 = pp2 + pgsize;
+ 	pp4 = pp3 + pgsize;
+-	memset(pp1, 0, pgsize * 4);
+ 
+ 	addr0 = 0;
+ 	for (i = 0; i < ebcnt && bbt[i]; ++i)
+Index: linux-4.4.70/include/linux/mtd/bbm.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/bbm.h	2017-03-21 16:13:00.000000000 +0800
++++ linux-4.4.70/include/linux/mtd/bbm.h	2017-06-27 10:27:30.479335000 +0800
+@@ -166,7 +166,6 @@
+ };
+ 
+ /* OneNAND BBT interface */
+-extern int onenand_scan_bbt(struct mtd_info *mtd, struct nand_bbt_descr *bd);
+ extern int onenand_default_bbt(struct mtd_info *mtd);
+ 
+ #endif	/* __LINUX_MTD_BBM_H */
+Index: linux-4.4.70/include/linux/mtd/fsmc.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/fsmc.h	2017-03-21 16:13:00.000000000 +0800
++++ linux-4.4.70/include/linux/mtd/fsmc.h	2017-06-27 10:27:30.486346000 +0800
+@@ -103,24 +103,6 @@
+ 
+ #define FSMC_BUSY_WAIT_TIMEOUT	(1 * HZ)
+ 
+-/*
+- * There are 13 bytes of ecc for every 512 byte block in FSMC version 8
+- * and it has to be read consecutively and immediately after the 512
+- * byte data block for hardware to generate the error bit offsets
+- * Managing the ecc bytes in the following way is easier. This way is
+- * similar to oobfree structure maintained already in u-boot nand driver
+- */
+-#define MAX_ECCPLACE_ENTRIES	32
+-
+-struct fsmc_nand_eccplace {
+-	uint8_t offset;
+-	uint8_t length;
+-};
+-
+-struct fsmc_eccplace {
+-	struct fsmc_nand_eccplace eccplace[MAX_ECCPLACE_ENTRIES];
+-};
+-
+ struct fsmc_nand_timings {
+ 	uint8_t tclr;
+ 	uint8_t tar;
+Index: linux-4.4.70/include/linux/mtd/inftl.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/inftl.h	2017-03-21 16:13:00.000000000 +0800
++++ linux-4.4.70/include/linux/mtd/inftl.h	2017-06-27 10:27:30.490349000 +0800
+@@ -44,7 +44,6 @@
+ 	unsigned int nb_blocks;		/* number of physical blocks */
+ 	unsigned int nb_boot_blocks;	/* number of blocks used by the bios */
+ 	struct erase_info instr;
+-	struct nand_ecclayout oobinfo;
+ };
+ 
+ int INFTL_mount(struct INFTLrecord *s);
+Index: linux-4.4.70/include/linux/mtd/map.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/map.h	2017-06-09 09:45:55.000000000 +0800
++++ linux-4.4.70/include/linux/mtd/map.h	2017-06-27 10:27:30.494341000 +0800
+@@ -137,7 +137,9 @@
+ #endif
+ 
+ #ifndef map_bankwidth
++#ifdef CONFIG_MTD
+ #warning "No CONFIG_MTD_MAP_BANK_WIDTH_xx selected. No NOR chip support can work"
++#endif
+ static inline int map_bankwidth(void *map)
+ {
+ 	BUG();
+@@ -233,8 +235,11 @@
+ 	   If there is no cache to care about this can be set to NULL. */
+ 	void (*inval_cache)(struct map_info *, unsigned long, ssize_t);
+ 
+-	/* set_vpp() must handle being reentered -- enable, enable, disable
+-	   must leave it enabled. */
++	/* This will be called with 1 as parameter when the first map user
++	 * needs VPP, and called with 0 when the last user exits. The map
++	 * core maintains a reference counter, and assumes that VPP is a
++	 * global resource applying to all mapped flash chips on the system.
++	 */
+ 	void (*set_vpp)(struct map_info *, int);
+ 
+ 	unsigned long pfow_base;
+Index: linux-4.4.70/include/linux/mtd/mtd.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/mtd.h	2017-06-27 10:27:29.421369000 +0800
++++ linux-4.4.70/include/linux/mtd/mtd.h	2017-06-27 10:27:30.499333000 +0800
+@@ -55,7 +55,7 @@
+ 	u_long priv;
+ 	u_char state;
+ 	struct erase_info *next;
+-	136 +
++
+ 	u8 *erase_buf;
+ 	u32 erase_buf_ofs;
+ 	bool partial_start;
+Index: linux-4.4.70/include/linux/mtd/nand.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/nand.h	2017-06-27 10:27:29.661353000 +0800
++++ linux-4.4.70/include/linux/mtd/nand.h	2017-06-27 10:27:30.504339000 +0800
+@@ -174,6 +174,12 @@
+ /* Device supports subpage reads */
+ #define NAND_SUBPAGE_READ	0x00001000
+ 
++/*
++ * Some MLC NANDs need data scrambling to limit bitflips caused by repeated
++ * patterns.
++ */
++#define NAND_NEED_SCRAMBLING	0x00002000
++
+ /* Options valid for Samsung large page devices */
+ #define NAND_SAMSUNG_LP_OPTIONS NAND_CACHEPRG
+ 
+@@ -290,15 +296,15 @@
+ 	__le16 t_r;
+ 	__le16 t_ccs;
+ 	__le16 src_sync_timing_mode;
+-	__le16 src_ssync_features;
++	u8 src_ssync_features;
+ 	__le16 clk_pin_capacitance_typ;
+ 	__le16 io_pin_capacitance_typ;
+ 	__le16 input_pin_capacitance_typ;
+ 	u8 input_pin_capacitance_max;
+ 	u8 driver_strength_support;
+ 	__le16 t_int_r;
+-	__le16 t_ald;
+-	u8 reserved4[7];
++	__le16 t_adl;
++	u8 reserved4[8];
+ 
+ 	/* vendor */
+ 	__le16 vendor_revision;
+@@ -421,7 +427,7 @@
+ 	__le16 input_pin_capacitance_typ;
+ 	__le16 clk_pin_capacitance_typ;
+ 	u8 driver_strength_support;
+-	__le16 t_ald;
++	__le16 t_adl;
+ 	u8 reserved4[36];
+ 
+ 	/* ECC and endurance block */
+@@ -906,7 +912,6 @@
+  * @chip_delay:		R/B delay value in us
+  * @options:		Option flags, e.g. 16bit buswidth
+  * @bbt_options:	BBT option flags, e.g. NAND_BBT_USE_FLASH
+- * @ecclayout:		ECC layout info structure
+  * @part_probe_types:	NULL-terminated array of probe types
+  */
+ struct platform_nand_chip {
+@@ -914,7 +919,6 @@
+ 	int chip_offset;
+ 	int nr_partitions;
+ 	struct mtd_partition *partitions;
+-	struct nand_ecclayout *ecclayout;
+ 	int chip_delay;
+ 	unsigned int options;
+ 	unsigned int bbt_options;
+@@ -964,15 +968,6 @@
+ 	struct platform_nand_ctrl ctrl;
+ };
+ 
+-/* Some helpers to access the data structures */
+-static inline
+-struct platform_nand_chip *get_platform_nandchip(struct mtd_info *mtd)
+-{
+-	struct nand_chip *chip = mtd->priv;
+-
+-	return chip->priv;
+-}
+-
+ /* return the supported features. */
+ static inline int onfi_feature(struct nand_chip *chip)
+ {
+Index: linux-4.4.70/include/linux/mtd/nftl.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/nftl.h	2017-03-21 16:13:00.000000000 +0800
++++ linux-4.4.70/include/linux/mtd/nftl.h	2017-06-27 10:27:30.508336000 +0800
+@@ -50,7 +50,6 @@
+         unsigned int nb_blocks;		/* number of physical blocks */
+         unsigned int nb_boot_blocks;	/* number of blocks used by the bios */
+         struct erase_info instr;
+-	struct nand_ecclayout oobinfo;
+ };
+ 
+ int NFTL_mount(struct NFTLrecord *s);
+Index: linux-4.4.70/include/linux/mtd/onenand.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/onenand.h	2017-03-21 16:13:00.000000000 +0800
++++ linux-4.4.70/include/linux/mtd/onenand.h	2017-06-27 10:27:30.512335000 +0800
+@@ -80,7 +80,6 @@
+  * @page_buf:		[INTERN] page main data buffer
+  * @oob_buf:		[INTERN] page oob data buffer
+  * @subpagesize:	[INTERN] holds the subpagesize
+- * @ecclayout:		[REPLACEABLE] the default ecc placement scheme
+  * @bbm:		[REPLACEABLE] pointer to Bad Block Management
+  * @priv:		[OPTIONAL] pointer to private chip date
+  */
+@@ -134,7 +133,6 @@
+ #endif
+ 
+ 	int			subpagesize;
+-	struct nand_ecclayout	*ecclayout;
+ 
+ 	void			*bbm;
+ 
+Index: linux-4.4.70/include/linux/mtd/partitions.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/partitions.h	2017-06-27 10:27:29.166358000 +0800
++++ linux-4.4.70/include/linux/mtd/partitions.h	2017-06-27 10:27:30.516339000 +0800
+@@ -42,7 +42,6 @@
+ 	uint64_t size;			/* partition size */
+ 	uint64_t offset;		/* offset within the master MTD space */
+ 	uint32_t mask_flags;		/* master MTD flags to mask out for this partition */
+-	struct nand_ecclayout *ecclayout;	/* out of band layout for this partition (NAND only) */
+ };
+ 
+ #define MTDPART_OFS_RETAIN	(-3)
+@@ -78,14 +77,34 @@
+ 	struct list_head list;
+ 	struct module *owner;
+ 	const char *name;
+-	int (*parse_fn)(struct mtd_info *, struct mtd_partition **,
++	int (*parse_fn)(struct mtd_info *, const struct mtd_partition **,
+ 			struct mtd_part_parser_data *);
++	void (*cleanup)(const struct mtd_partition *pparts, int nr_parts);
+ 	enum mtd_parser_type type;
+ };
+ 
+-extern void register_mtd_parser(struct mtd_part_parser *parser);
++/* Container for passing around a set of parsed partitions */
++struct mtd_partitions {
++	const struct mtd_partition *parts;
++	int nr_parts;
++	const struct mtd_part_parser *parser;
++};
++
++extern int __register_mtd_parser(struct mtd_part_parser *parser,
++				 struct module *owner);
++#define register_mtd_parser(parser) __register_mtd_parser(parser, THIS_MODULE)
++
+ extern void deregister_mtd_parser(struct mtd_part_parser *parser);
+ 
++/*
++ * module_mtd_part_parser() - Helper macro for MTD partition parsers that don't
++ * do anything special in module init/exit. Each driver may only use this macro
++ * once, and calling it replaces module_init() and module_exit().
++ */
++#define module_mtd_part_parser(__mtd_part_parser) \
++	module_driver(__mtd_part_parser, register_mtd_parser, \
++		      deregister_mtd_parser)
++
+ int mtd_is_partition(const struct mtd_info *mtd);
+ int mtd_add_partition(struct mtd_info *master, const char *name,
+ 		      long long offset, long long length);
+Index: linux-4.4.70/include/linux/mtd/sharpsl.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/sharpsl.h	2017-03-21 16:13:00.000000000 +0800
++++ linux-4.4.70/include/linux/mtd/sharpsl.h	2017-06-27 10:27:30.523345000 +0800
+@@ -14,7 +14,7 @@
+ 
+ struct sharpsl_nand_platform_data {
+ 	struct nand_bbt_descr	*badblock_pattern;
+-	struct nand_ecclayout	*ecc_layout;
++	const struct mtd_ooblayout_ops *ecc_layout;
+ 	struct mtd_partition	*partitions;
+ 	unsigned int		nr_partitions;
+ };
+Index: linux-4.4.70/include/linux/mtd/spi-nor.h
+===================================================================
+--- linux-4.4.70.orig/include/linux/mtd/spi-nor.h	2017-06-27 10:27:28.794373000 +0800
++++ linux-4.4.70/include/linux/mtd/spi-nor.h	2017-06-27 10:27:30.527338000 +0800
+@@ -85,6 +85,7 @@
+ #define SR_BP0			BIT(2)	/* Block protect 0 */
+ #define SR_BP1			BIT(3)	/* Block protect 1 */
+ #define SR_BP2			BIT(4)	/* Block protect 2 */
++#define SR_TB			BIT(5)	/* Top/Bottom protect */
+ #define SR_SRWD			BIT(7)	/* SR write protect */
+ 
+ #define SR_QUAD_EN_MX		BIT(6)	/* Macronix Quad I/O */
+@@ -116,6 +117,7 @@
+ 
+ enum spi_nor_option_flags {
+ 	SNOR_F_USE_FSR		= BIT(0),
++	SNOR_F_HAS_SR_TB	= BIT(1),
+ };
+ 
+ /**
+@@ -123,7 +125,6 @@
+  * @mtd:		point to a mtd_info structure
+  * @lock:		the lock for the read/write/erase/lock/unlock operations
+  * @dev:		point to a spi device, or a spi nor controller device.
+- * @flash_node:		point to a device node describing this flash instance.
+  * @page_size:		the page size of the SPI NOR
+  * @addr_width:		number of address bytes
+  * @erase_opcode:	the opcode for erasing a sector
+@@ -155,7 +156,6 @@
+ 	struct mtd_info		mtd;
+ 	struct mutex		lock;
+ 	struct device		*dev;
+-	struct device_node	*flash_node;
+ 	u32			page_size;
+ 	u8			addr_width;
+ 	u8			erase_opcode;
+@@ -188,12 +188,12 @@
+ static inline void spi_nor_set_flash_node(struct spi_nor *nor,
+ 					  struct device_node *np)
+ {
+-	nor->flash_node = np;
++	mtd_set_of_node(&nor->mtd, np);
+ }
+ 
+ static inline struct device_node *spi_nor_get_flash_node(struct spi_nor *nor)
+ {
+-	return nor->flash_node;
++	return mtd_get_of_node(&nor->mtd);
+ }
+ 
+ /**
+Index: linux-4.4.70/fs/jffs2/wbuf.c
+===================================================================
+--- linux-4.4.70.orig/fs/jffs2/wbuf.c	2017-03-21 16:12:55.000000000 +0800
++++ linux-4.4.70/fs/jffs2/wbuf.c	2017-06-27 10:30:49.596982000 +0800
+@@ -1153,7 +1153,7 @@
+ {
+ 	struct delayed_work *dwork;
+ 
+-	dwork = container_of(work, struct delayed_work, work);
++	dwork = to_delayed_work(work);
+ 	return container_of(dwork, struct jffs2_sb_info, wbuf_dwork);
+ }
+ 
+--- a/include/linux/mtd/sh_flctl.h
++++ b/include/linux/mtd/sh_flctl.h
+@@ -143,7 +143,6 @@ enum flctl_ecc_res_t {
+ struct dma_chan;
+ 
+ struct sh_flctl {
+-	struct mtd_info		mtd;
+ 	struct nand_chip	chip;
+ 	struct platform_device	*pdev;
+ 	struct dev_pm_qos_request pm_qos;
+@@ -187,7 +186,7 @@ struct sh_flctl_platform_data {
+ 
+ static inline struct sh_flctl *mtd_to_flctl(struct mtd_info *mtdinfo)
+ {
+-	return container_of(mtdinfo, struct sh_flctl, mtd);
++	return container_of(mtd_to_nand(mtdinfo), struct sh_flctl, chip);
+ }
+ 
+ #endif	/* __SH_FLCTL_H__ */

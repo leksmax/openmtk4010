@@ -1,0 +1,290 @@
+diff --git a/drivers/net/ethernet/mediatek/Kconfig b/drivers/net/ethernet/mediatek/Kconfig
+index 70595f6..a18356f 100644
+--- a/drivers/net/ethernet/mediatek/Kconfig
++++ b/drivers/net/ethernet/mediatek/Kconfig
+@@ -18,4 +18,11 @@ config NET_MEDIATEK_DBG
+ 	bool "Mediatek Ethernet debug interface"
+ 	depends on NET_MEDIATEK_SOC
+ 
++config NET_MEDIATEK_HNAT
++	tristate "MediaTek hardware NAT support"
++	depends on NET_MEDIATEK_SOC && NF_CONNTRACK && NF_CONNTRACK_IPV4 && IP_NF_NAT && IP_NF_TARGET_MASQUERADE
++	---help---
++	  This driver supports the hardwaer NAT in the
++	  MediaTek MT2701/MT762X chipset family.
++
+ endif #NET_VENDOR_MEDIATEK
+diff --git a/drivers/net/ethernet/mediatek/Makefile b/drivers/net/ethernet/mediatek/Makefile
+index 6209ba0..22813b1 100644
+--- a/drivers/net/ethernet/mediatek/Makefile
++++ b/drivers/net/ethernet/mediatek/Makefile
+@@ -4,3 +4,4 @@
+ 
+ obj-$(CONFIG_NET_MEDIATEK_SOC)			+= mtk_eth_soc.o
+ obj-$(CONFIG_NET_MEDIATEK_DBG)			+= mtk_eth_dbg.o
++obj-$(CONFIG_NET_MEDIATEK_HNAT)                 += mtk_hnat/
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+index 55b27f1..057dd97 100644
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+@@ -24,6 +24,10 @@
+ #include <linux/tcp.h>
+ #include <linux/interrupt.h>
+ 
++#if defined(CONFIG_NET_MEDIATEK_HNAT) || defined(CONFIG_NET_MEDIATEK_HNAT_MODULE)
++#include "mtk_hnat/nf_hnat_mtk.h"
++#endif
++
+ #include "mtk_eth_soc.h"
+ #include "mtk_eth_dbg.h"
+ 
+@@ -165,45 +169,72 @@ static void mtk_gmac0_rgmii_adjust(struct mtk_eth *eth, int speed)
+ 	mtk_w32(eth, val, TRGMII_TCK_CTRL);
+ }
+ 
+-static void mtk_gmac_sgmii_hw_setup(struct mtk_eth *eth, int mac_id)
++static void mtk_gmac_sgmii_hw_setup(struct mtk_eth *eth, int mac_id ,int force_link)
+ {
+-	u32 val;
++        u32 val;
+ 
+-	/* Setup the link timer and QPHY power up inside SGMIISYS */
+-	regmap_write(eth->sgmiisys, SGMSYS_PCS_LINK_TIMER,
+-		     SGMII_LINK_TIMER_DEFAULT);
++        /* Setup the link timer and QPHY power up inside SGMIISYS */
++        if(!force_link) {
++        regmap_write(eth->sgmiisys, SGMSYS_PCS_LINK_TIMER,
++                     SGMII_LINK_TIMER_DEFAULT);
+ 
+-	regmap_read(eth->sgmiisys, SGMSYS_SGMII_MODE, &val);
+-	val |= SGMII_REMOTE_FAULT_DIS;
+-	regmap_write(eth->sgmiisys, SGMSYS_SGMII_MODE, val);
++        regmap_read(eth->sgmiisys, SGMSYS_SGMII_MODE, &val);
++        val |= SGMII_REMOTE_FAULT_DIS;
++        regmap_write(eth->sgmiisys, SGMSYS_SGMII_MODE, val);
+ 
+-	regmap_read(eth->sgmiisys, SGMSYS_PCS_CONTROL_1, &val);
+-	val |= SGMII_AN_RESTART;
+-	regmap_write(eth->sgmiisys, SGMSYS_PCS_CONTROL_1, val);
++        regmap_read(eth->sgmiisys, SGMSYS_PCS_CONTROL_1, &val);
++        val |= SGMII_AN_RESTART;
++        regmap_write(eth->sgmiisys, SGMSYS_PCS_CONTROL_1, val);
+ 
+-	regmap_read(eth->sgmiisys, SGMSYS_QPHY_PWR_STATE_CTRL, &val);
+-	val &= ~SGMII_PHYA_PWD;
+-	regmap_write(eth->sgmiisys, SGMSYS_QPHY_PWR_STATE_CTRL, val);
++        }
++        else { //force_link
++        /* set GMAC1 forced link at 1Gbps FDX */
++        //virt_addr = ioremap(0x1b110000, 0x300);
++        mtk_w32(eth, 0x2105e33b, 0x10000+0x100); //
++        mtk_w32(eth, 0x2105e33b, 0x10000+0x200);
+ 
+-	/* Determine MUX for which GMAC uses the SGMII interface */
+-	if (MTK_HAS_CAPS(eth->soc->caps, MTK_DUAL_GMAC_SHARED_SGMII)) {
+-		regmap_read(eth->ethsys, ETHSYS_SYSCFG0, &val);
+-		val &= ~SYSCFG0_SGMII_MASK;
+-		val |= !mac_id ? SYSCFG0_SGMII_GMAC1 : SYSCFG0_SGMII_GMAC2;
+-		regmap_write(eth->ethsys, ETHSYS_SYSCFG0, val);
++        /* Set SGMII GEN2 speed(2.5G) */
++        //virt_addr = ioremap(0x1b12a000, 0x30);
++        regmap_read(eth->sgmiisys, 0x2000+0x28 , &val);
++        val |= 1 << 2 ;
++        regmap_write(eth->sgmiisys, 0x2000+0x28 , val);
+ 
+-		dev_info(eth->dev, "setup shared sgmii for gmac=%d\n",
+-			 mac_id);
+-	}
++        /* disable SGMII AN */
++        regmap_read(eth->sgmiisys, SGMSYS_PCS_CONTROL_1, &val);
++        val &= ~(1 << 12);
++        regmap_write(eth->sgmiisys, SGMSYS_PCS_CONTROL_1, val);
+ 
+-	/* Setup the GMAC1 going through SGMII path when SoC also support
+-	 * ESW on GMAC1
+-	 */
+-	if (MTK_HAS_CAPS(eth->soc->caps, MTK_GMAC1_ESW | MTK_GMAC1_SGMII) &&
+-	    !mac_id) {
+-		mtk_w32(eth, 0, MTK_MAC_MISC);
+-		dev_info(eth->dev, "setup gmac1 going through sgmii");
+-	}
++        /* SGMII force mode setting */
++        regmap_read(eth->sgmiisys, SGMSYS_SGMII_MODE, &val);
++        val = 0x31120019;
++        regmap_write(eth->sgmiisys, SGMSYS_SGMII_MODE, val);
++
++        }
++
++        /* Determine MUX for which GMAC uses the SGMII interface */
++        if (MTK_HAS_CAPS(eth->soc->caps, MTK_DUAL_GMAC_SHARED_SGMII)) {
++                regmap_read(eth->ethsys, ETHSYS_SYSCFG0, &val);
++                val &= ~SYSCFG0_SGMII_MASK;
++                val |= !mac_id ? SYSCFG0_SGMII_GMAC1 : SYSCFG0_SGMII_GMAC2;
++                regmap_write(eth->ethsys, ETHSYS_SYSCFG0, val);
++
++                dev_info(eth->dev, "setup shared sgmii for gmac=%d\n",
++                         mac_id);
++        }
++
++        /* Setup the GMAC1 going through SGMII path when SoC also support
++         * ESW on GMAC1
++         */
++        if (MTK_HAS_CAPS(eth->soc->caps, MTK_GMAC1_ESW | MTK_GMAC1_SGMII) &&
++            !mac_id) {
++                mtk_w32(eth, 0, MTK_MAC_MISC);
++                dev_info(eth->dev, "setup gmac1 going through sgmii");
++        }
++
++        /* Release PHYA power down state */
++        regmap_read(eth->sgmiisys, SGMSYS_QPHY_PWR_STATE_CTRL, &val);
++        val &= ~SGMII_PHYA_PWD;
++        regmap_write(eth->sgmiisys, SGMSYS_QPHY_PWR_STATE_CTRL, val);
+ }
+ 
+ static void mtk_phy_link_adjust(struct net_device *dev)
+@@ -324,7 +355,7 @@ static int mtk_phy_connect(struct net_device *dev)
+ 		break;
+ 	case PHY_INTERFACE_MODE_SGMII:
+ 		if (MTK_HAS_CAPS(eth->soc->caps, MTK_SGMII))
+-			mtk_gmac_sgmii_hw_setup(eth, mac->id);
++			mtk_gmac_sgmii_hw_setup(eth, mac->id,of_phy_is_fixed_link(mac->of_node));
+ 		break;
+ 	case PHY_INTERFACE_MODE_MII:
+ 		mac->ge_mode = 1;
+@@ -712,8 +743,8 @@ static int mtk_tx_map(struct sk_buff *skb, struct net_device *dev,
+ 		txd4 |= TX_DMA_CHKSUM;
+ 
+ 	/* VLAN header offload */
+-	if (skb_vlan_tag_present(skb))
+-		txd4 |= TX_DMA_INS_VLAN | skb_vlan_tag_get(skb);
++//	if (skb_vlan_tag_present(skb))
++//		txd4 |= TX_DMA_INS_VLAN | skb_vlan_tag_get(skb);
+ 
+ 	mapped_addr = dma_map_single(eth->dev, skb->data,
+ 				     skb_headlen(skb), DMA_TO_DEVICE);
+@@ -994,10 +1025,14 @@ static int mtk_poll_rx(struct napi_struct *napi, int budget,
+ 			break;
+ 
+ 		/* find out which mac the packet come from. values start at 1 */
+-		mac = (trxd.rxd4 >> RX_DMA_FPORT_SHIFT) &
+-		      RX_DMA_FPORT_MASK;
+-		mac--;
+-
++#if defined(CONFIG_NET_DSA)
++               mac = (trxd.rxd4 >> 22) & 0x1;
++               mac = (mac + 1) % 2;
++#else
++               mac = (trxd.rxd4 >> RX_DMA_FPORT_SHIFT) &
++                      RX_DMA_FPORT_MASK;
++               mac--;
++#endif
+ 		if (unlikely(mac < 0 || mac >= MTK_MAC_COUNT ||
+ 			     !eth->netdev[mac]))
+ 			goto release_desc;
+@@ -1047,6 +1082,10 @@ static int mtk_poll_rx(struct napi_struct *napi, int budget,
+ 		    RX_DMA_VID(trxd.rxd3))
+ 			__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q),
+ 					       RX_DMA_VID(trxd.rxd3));
++#if defined(CONFIG_NET_MEDIATEK_HNAT) || defined(CONFIG_NET_MEDIATEK_HNAT_MODULE)
++               *(u32 *)(skb->head) = trxd.rxd4;
++               skb_hnat_alg(skb) = 0;
++#endif
+ 		skb_record_rx_queue(skb, 0);
+ 		napi_gro_receive(napi, skb);
+ 
+@@ -1930,6 +1969,13 @@ err_disable_clks:
+ static int mtk_hw_init(struct mtk_eth *eth)
+ {
+ 	int i, val, ret;
++	/*FIXME : ioc patch*/
++	void __iomem *reg_virt;
++        unsigned int reg_val;
++#define sys_reg_write(phys, val) (__raw_writel(val, (void __iomem *)phys))
++        reg_virt = ioremap(0x10395000, 0x10);
++        sys_reg_write(reg_virt, 0x00000003);
++	/*-----------------*/
+ 
+ 	if (test_and_set_bit(MTK_HW_INIT, &eth->state))
+ 		return 0;
+@@ -1975,9 +2021,12 @@ static int mtk_hw_init(struct mtk_eth *eth)
+ 	val = mtk_r32(eth, MTK_CDMQ_IG_CTRL);
+ 	mtk_w32(eth, val | MTK_CDMQ_STAG_EN, MTK_CDMQ_IG_CTRL);
+ 
+-	/* Enable RX VLan Offloading */
+-	mtk_w32(eth, 1, MTK_CDMP_EG_CTRL);
++	/* Disable RX VLan Offloading */
++	mtk_w32(eth, 0, MTK_CDMP_EG_CTRL);
+ 
++#if defined(CONFIG_NET_DSA)
++	mtk_w32(eth, 0x81000001, MTK_CDMP_IG_CTRL);
++#endif
+ 	/* enable interrupt delay for RX */
+ 	mtk_w32(eth, MTK_PDMA_DELAY_RX_DELAY, MTK_PDMA_DELAY_INT);
+ 
+@@ -2307,13 +2356,13 @@ static int mtk_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *cmd,
+ 
+ 	switch (cmd->cmd) {
+ 	case ETHTOOL_GRXRINGS:
+-		if (dev->features & NETIF_F_LRO) {
++		if (dev->hw_features & NETIF_F_LRO) {
+ 			cmd->data = MTK_MAX_RX_RING_NUM;
+ 			ret = 0;
+ 		}
+ 		break;
+ 	case ETHTOOL_GRXCLSRLCNT:
+-		if (dev->features & NETIF_F_LRO) {
++		if (dev->hw_features & NETIF_F_LRO) {
+ 			struct mtk_mac *mac = netdev_priv(dev);
+ 
+ 			cmd->rule_cnt = mac->hwlro_ip_cnt;
+@@ -2321,11 +2370,11 @@ static int mtk_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *cmd,
+ 		}
+ 		break;
+ 	case ETHTOOL_GRXCLSRULE:
+-		if (dev->features & NETIF_F_LRO)
++		if (dev->hw_features & NETIF_F_LRO)
+ 			ret = mtk_hwlro_get_fdir_entry(dev, cmd);
+ 		break;
+ 	case ETHTOOL_GRXCLSRLALL:
+-		if (dev->features & NETIF_F_LRO)
++		if (dev->hw_features & NETIF_F_LRO)
+ 			ret = mtk_hwlro_get_fdir_all(dev, cmd,
+ 						     rule_locs);
+ 		break;
+@@ -2342,11 +2391,11 @@ static int mtk_set_rxnfc(struct net_device *dev, struct ethtool_rxnfc *cmd)
+ 
+ 	switch (cmd->cmd) {
+ 	case ETHTOOL_SRXCLSRLINS:
+-		if (dev->features & NETIF_F_LRO)
++		if (dev->hw_features & NETIF_F_LRO)
+ 			ret = mtk_hwlro_add_ipaddr(dev, cmd);
+ 		break;
+ 	case ETHTOOL_SRXCLSRLDEL:
+-		if (dev->features & NETIF_F_LRO)
++		if (dev->hw_features & NETIF_F_LRO)
+ 			ret = mtk_hwlro_del_ipaddr(dev, cmd);
+ 		break;
+ 	default:
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.h b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+index 4f0bca6..408adea 100644
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.h
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+@@ -34,8 +34,6 @@
+ 				 NETIF_MSG_TX_ERR)
+ #define MTK_HW_FEATURES		(NETIF_F_IP_CSUM | \
+ 				 NETIF_F_RXCSUM | \
+-				 NETIF_F_HW_VLAN_CTAG_TX | \
+-				 NETIF_F_HW_VLAN_CTAG_RX | \
+ 				 NETIF_F_SG | NETIF_F_TSO | \
+ 				 NETIF_F_TSO6 | \
+ 				 NETIF_F_IPV6_CSUM)
+@@ -74,6 +72,9 @@
+ #define MTK_CDMQ_IG_CTRL	0x1400
+ #define MTK_CDMQ_STAG_EN	BIT(0)
+ 
++/* CDMP Ingress Control Register */
++#define MTK_CDMP_IG_CTRL       0x400
++
+ /* CDMP Exgress Control Register */
+ #define MTK_CDMP_EG_CTRL	0x404
+ 

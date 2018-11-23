@@ -1,0 +1,9 @@
+FROM scratch
+COPY /start.sh /start.sh
+COPY /chrony.conf /chrony.conf
+COPY /chrony.config /chrony.config
+COPY /chronyc-3.4 /chronyc-3.4
+COPY /chronyd-3.4 /chronyd-3.4
+COPY /chronyd.init /chronyd.init
+ENV  ARGS="123 323"
+CMD  ["/start.sh"]

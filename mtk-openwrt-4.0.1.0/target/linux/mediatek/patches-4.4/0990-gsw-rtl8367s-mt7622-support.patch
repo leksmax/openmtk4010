@@ -1,0 +1,24 @@
+diff -urN a/drivers/net/phy/Kconfig b/drivers/net/phy/Kconfig
+--- a/drivers/net/phy/Kconfig	2018-03-19 17:23:49.232255606 +0800
++++ b/drivers/net/phy/Kconfig	2018-03-19 17:23:26.193502226 +0800
+@@ -298,6 +298,12 @@
+ 
+ endif # RTL8366_SMI
+ 
++config RTL8367S_GSW
++	tristate "rtl8367 Gigabit Switch support for mt7622"
++	depends on NET_VENDOR_MEDIATEK
++	---help---
++	  This driver supports rtl8367s in mt7622
++
+ endif # PHYLIB
+ 
+ config MICREL_KS8995MA
+diff -urN a/drivers/net/phy/Makefile b/drivers/net/phy/Makefile
+--- a/drivers/net/phy/Makefile	2018-03-19 17:24:01.225194353 +0800
++++ b/drivers/net/phy/Makefile	2018-03-19 17:23:35.711409276 +0800
+@@ -48,3 +48,4 @@
+ obj-$(CONFIG_MDIO_BCM_UNIMAC)	+= mdio-bcm-unimac.o
+ obj-$(CONFIG_MICROCHIP_PHY)	+= microchip.o
+ obj-$(CONFIG_MDIO_BCM_IPROC)	+= mdio-bcm-iproc.o
++obj-$(CONFIG_RTL8367S_GSW)      += rtk/

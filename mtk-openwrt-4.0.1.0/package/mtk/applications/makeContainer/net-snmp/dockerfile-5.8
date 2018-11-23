@@ -1,0 +1,6 @@
+FROM scratch
+COPY /start.sh /start.sh
+COPY /net-snmp-5.8/sbin /net-snmp-5.8/sbin
+COPY /snmpd.* /
+ENV  ARGS=161
+CMD  ["/start.sh"]

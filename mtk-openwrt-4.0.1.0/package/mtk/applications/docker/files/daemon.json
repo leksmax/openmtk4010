@@ -1,0 +1,11 @@
+{
+    "storage-driver": "overlay2",
+    "data-root": "/mnt/sda2/docker",
+    "raw-logs": true,
+    "ipv6": false,
+    "bip": "10.1.1.1/16",
+    "mtu": 1500,
+    "default-gateway": "",
+    "dns": ["168.126.63.1","8.8.8.8"]
+}
+

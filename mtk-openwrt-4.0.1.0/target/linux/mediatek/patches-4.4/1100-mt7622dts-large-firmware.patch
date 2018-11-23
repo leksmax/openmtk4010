@@ -1,0 +1,38 @@
+diff -urN linux-4.4.124.orig/arch/arm64/boot/dts/mediatek/mt7622-ac2600rfb1.dts linux-4.4.124.patch/arch/arm64/boot/dts/mediatek/mt7622-ac2600rfb1.dts
+--- linux-4.4.124.orig/arch/arm64/boot/dts/mediatek/mt7622-ac2600rfb1.dts	2018-05-07 05:31:51.000000000 +0000
++++ linux-4.4.124.patch/arch/arm64/boot/dts/mediatek/mt7622-ac2600rfb1.dts	2018-11-19 23:57:35.859172077 +0000
+@@ -681,12 +681,12 @@
+ 
+ 			partition@200000 {
+ 				label = "Kernel";
+-				reg = <0x200000 0x2000000>;
++				reg = <0x200000 0x6A00000>;
+ 			};
+ 
+-			partition@2200000 {
++			partition@6C00000 {
+ 				label = "User_data";
+-				reg = <0x2200000 0x4000000>;
++				reg = <0x6C00000 0x0400000>;
+ 			};
+ 		};
+ 	};
+diff -urN linux-4.4.124.orig/arch/arm64/boot/dts/mediatek/mt7622-ac4300rfb1.dts linux-4.4.124.patch/arch/arm64/boot/dts/mediatek/mt7622-ac4300rfb1.dts
+--- linux-4.4.124.orig/arch/arm64/boot/dts/mediatek/mt7622-ac4300rfb1.dts	2018-05-07 05:31:51.000000000 +0000
++++ linux-4.4.124.patch/arch/arm64/boot/dts/mediatek/mt7622-ac4300rfb1.dts	2018-11-19 23:58:25.811170202 +0000
+@@ -640,12 +640,12 @@
+ 
+ 			partition@200000 {
+ 				label = "Kernel";
+-				reg = <0x200000 0x2000000>;
++				reg = <0x200000 0x6A00000>;
+ 			};
+ 
+-			partition@2200000 {
++			partition@6C00000 {
+ 				label = "User_data";
+-				reg = <0x2200000 0x4000000>;
++				reg = <0x6C00000 0x0400000>;
+ 			};
+ 		};
+ 	};

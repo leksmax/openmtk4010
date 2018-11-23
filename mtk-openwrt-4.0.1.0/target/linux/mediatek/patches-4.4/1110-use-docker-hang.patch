@@ -1,0 +1,37 @@
+--- linux-4.4.124.orig/net/core/dev.c	2018-05-07 05:31:56.000000000 +0000
++++ linux-4.4.124/net/core/dev.c	2018-08-28 07:52:06.992898716 +0000
+@@ -6927,6 +6927,17 @@
+ 	refcnt = netdev_refcnt_read(dev);
+ 
+ 	while (refcnt != 0) {
++		/*
++		 * When using DOCKER, the following error message occurs.
++		 * And it is locked and does not work normally.
++		 * unregister_netdevice: waiting for lo to become free. Usage count = 1
++		 *
++		 * So, We do not proceed to the ROUTINE below temporarily.
++		 */
++		printk(KERN_EMERG "%s[%d]: dev[%s] refcnt[%d]\n",
++						__func__, __LINE__, dev->name, netdev_refcnt_read(dev));
++		break;
++
+ 		if (time_after(jiffies, rebroadcast_time + 1 * HZ)) {
+ 			rtnl_lock();
+ 
+@@ -7025,7 +7036,16 @@
+ 		netdev_wait_allrefs(dev);
+ 
+ 		/* paranoia */
++		/*
++		 * When using DOCKER, the following error message occurs.
++		 * And it is locked and does not work normally.
++		 * "unregister_netdevice: waiting for lo to become free. Usage count = 1"
++		 *
++		 * So, We do not proceed to the ROUTINE below temporarily.
++		 */
++		/*
+ 		BUG_ON(netdev_refcnt_read(dev));
++		 */
+ 		BUG_ON(!list_empty(&dev->ptype_all));
+ 		BUG_ON(!list_empty(&dev->ptype_specific));
+ 		WARN_ON(rcu_access_pointer(dev->ip_ptr));

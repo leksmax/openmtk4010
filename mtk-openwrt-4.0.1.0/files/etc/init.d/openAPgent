@@ -1,0 +1,30 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+APGENT_PATH=/www/openAPgent
+APCLIENT=apClient
+
+APCLIENT_LOG_FILE="/var/log/apClient.log"
+
+
+check_log_file() {
+	if [ ! -f "$APCLIENT_LOG_FILE" ]; then
+	    touch $APCLIENT_LOG_FILE
+	fi
+}
+
+client_start() {
+	cd $APGENT_PATH
+	echo "run apClient service......"
+	python -m $APCLIENT &
+}
+
+start() {
+	client_start
+	check_log_file
+}
+
+stop() {
+	echo "Kill: python $APCLIENT TODO"
+}

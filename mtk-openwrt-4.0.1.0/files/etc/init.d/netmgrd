@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+start() {
+	/usr/sbin/netmgrd &
+	echo "run netmgrd.."
+}
+
+stop() {
+	echo "stop gunicorn..."
+	killall netmgrd 
+}

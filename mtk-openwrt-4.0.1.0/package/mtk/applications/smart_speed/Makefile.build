@@ -1,0 +1,67 @@
+#
+# hua.shao@mediatek.com
+#
+# MTK Property Software.
+#
+
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=smart_speed
+PKG_RELEASE:=1
+PKG_SOURCE:=$(PKG_NAME).tar.gz
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
+PKG_CONFIG_DEPENDS:=
+
+include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/kernel.mk
+
+define Package/smart_speed
+  SECTION:=MTK Properties
+  CATEGORY:=MTK Properties
+  TITLE:=smart speed
+  SUBMENU:=Applications
+endef
+
+define Package/smart_speed/description
+	smart speed
+endef
+
+ifeq ($(MTK_RELEASE_VERSION),trunk)
+USE_SOURCE_DIR:=$(MTK_GATEWAY_APP_DIR)/smart_speed
+define Build/Prepare
+	rm -rf $(PKG_BUILD_DIR)
+	$(if $(wildcard $(USE_SOURCE_DIR)/*),,@echo "Error: USE_SOURCE_DIR=$(USE_SOURCE_DIR) path not found"; false)
+	cp -rf $(USE_SOURCE_DIR) $(PKG_BUILD_DIR)
+	rm -rf $(PKG_BUILD_DIR)/.git
+	rm -rf $(PKG_BUILD_DIR)/smart_speed
+	$(Build/Patch)
+	touch $(PKG_BUILD_DIR)/.source_dir
+	touch $(PKG_BUILD_DIR)/.no_autorebuild
+endef
+endif
+
+TARGET_CFLAGS += -Wall -DCONFIG_SUPPORT_OPENWRT
+TARGET_CFLAGS += -Wno-error=format-security 
+ifeq ($(CONFIG_TARGET_mediatek),y)
+TARGET_CFLAGS += \
+        -I$(LINUX_DIR)/drivers/net/ethernet/raeth
+else
+TARGET_CFLAGS +=  \
+        -I$(LINUX_DIR)/drivers/net/raeth
+endif
+
+MAKE_FLAGS += CONFIG_SUPPORT_OPENWRT=y
+
+define Build/Configure
+endef
+
+define Package/smart_speed/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/smart_speed $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/smart_speed ./files/smart_speed_$(CONFIG_TARGET_SUBTARGET)
+endef
+
+
+$(eval $(call BuildPackage,smart_speed))
+

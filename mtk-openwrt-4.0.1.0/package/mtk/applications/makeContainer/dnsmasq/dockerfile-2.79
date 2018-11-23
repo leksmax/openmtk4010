@@ -1,0 +1,6 @@
+FROM scratch
+COPY /start.sh /start.sh
+COPY /dnsmasq-2.79 /dnsmasq-2.79
+COPY /dnsmasq.init /dnsmasq.init
+ENV  ARGS="53 67"
+CMD  ["/start.sh"]

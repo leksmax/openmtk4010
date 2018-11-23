@@ -1,0 +1,26 @@
+#!/bin/sh /etc/rc.common
+
+START=80
+
+GUNICORN=/usr/bin/gunicorn
+APSERVER_DIR=/www/openAPgent
+
+#Timeout default is 30 seconds ?
+TIMEOUT=60
+NUM_WORKERS=3
+
+start() {
+	cd $APSERVER_DIR
+	$GUNICORN --workers $NUM_WORKERS \
+            --timeout $TIMEOUT \
+            --error-logfile /var/log/gunicorn.log \
+            --daemon    \
+            --reload    \
+            --bind unix:/www/openAPgent/apServer.sock apServer.wsgi:application
+	echo "run gunicorn..."
+}
+
+stop() {
+	echo "stop gunicorn..."
+	killall gunicorn
+}

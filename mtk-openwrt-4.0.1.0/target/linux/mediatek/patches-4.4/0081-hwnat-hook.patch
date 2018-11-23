@@ -1,0 +1,13 @@
+Index: linux-4.4.43/net/nat/foe_hook/hook.c
+===================================================================
+--- linux-4.4.43.orig/net/nat/foe_hook/hook.c
++++ linux-4.4.43/net/nat/foe_hook/hook.c
+@@ -48,6 +48,8 @@ void  hwnat_magic_tag_set_zero(struct sk
+ 	}
+ }
+ 
++EXPORT_SYMBOL(hwnat_magic_tag_set_zero);
++
+ void hwnat_check_magic_tag(struct sk_buff *skb)
+ {
+ 	if (IS_SPACE_AVAILABLE_HEAD(skb)) {

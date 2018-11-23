@@ -1,0 +1,12 @@
+diff -urN ndpi-netfilter-97099ff-2.2.orig/ndpi-netfilter/src/main.c ndpi-netfilter-97099ff-2.2/ndpi-netfilter/src/main.c
+--- ndpi-netfilter-97099ff-2.2.orig/ndpi-netfilter/src/main.c	2018-07-19 21:13:14.000000000 +0000
++++ ndpi-netfilter-97099ff-2.2/ndpi-netfilter/src/main.c	2018-11-13 01:55:36.165601330 +0000
+@@ -3615,7 +3615,7 @@
+ }
+ #else
+ static struct nf_ct_ext_type ndpi_extend = {
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+        .seq_print = seq_print_ndpi,
+ #endif
+        .destroy   = nf_ndpi_free_flow,

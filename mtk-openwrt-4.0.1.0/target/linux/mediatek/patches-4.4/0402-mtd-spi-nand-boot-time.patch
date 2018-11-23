@@ -1,0 +1,43 @@
+diff -urN a/drivers/mtd/mtdcore.c b/drivers/mtd/mtdcore.c
+--- a/drivers/mtd/mtdcore.c	2018-02-01 10:33:14.724814000 +0800
++++ b/drivers/mtd/mtdcore.c	2018-02-01 10:37:46.861944000 +0800
+@@ -925,12 +925,20 @@
+ }
+ EXPORT_SYMBOL_GPL(mtd_get_unmapped_area);
+ 
++#ifdef CONFIG_MTD_NAND_MTK
++extern int is_bmt_used(void);
++#endif
+ /* Learn total bad block number before access offs+len */
+ int mtd_countbad(struct mtd_info *mtd, loff_t offs, unsigned int len)
+ {
+ 	int bad = 0;
+ 	loff_t offset = 0;
+ 
++#ifdef CONFIG_MTD_NAND_MTK
++	if (is_bmt_used())
++		return 0;
++#endif
++
+ 	while ((offs + len) > offset) {
+ 		if (mtd_block_isbad(mtd, offset) > 0) {
+ 			bad++;
+diff -urN a/drivers/mtd/nand/bmt_burner.c b/drivers/mtd/nand/bmt_burner.c
+--- a/drivers/mtd/nand/bmt_burner.c	2018-02-01 10:35:54.097542000 +0800
++++ b/drivers/mtd/nand/bmt_burner.c	2018-02-01 10:35:41.192727000 +0800
+@@ -471,6 +471,15 @@
+ 	return mapping_block;
+ }
+ 
++int is_bmt_used(void)
++{
++	if (is_bmt_ready())
++		return 1;
++	else
++		return 0;
++}
++EXPORT_SYMBOL_GPL(is_bmt_used);
++
+ /* total_blocks - The total count of blocks that the Nand Chip has */
+ int init_bmt(struct mtk_snand_host *host, unsigned short total_blocks,
+ 		unsigned short pmt_block)

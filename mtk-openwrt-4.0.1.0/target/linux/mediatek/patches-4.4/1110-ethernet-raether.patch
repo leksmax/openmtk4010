@@ -1,0 +1,53 @@
+diff -urN a/drivers/net/ethernet/raeth/raether.c b/drivers/net/ethernet/raeth/raether.c
+--- a/drivers/net/ethernet/raeth/raether.c	2018-10-11 10:08:42.483481541 +0000
++++ b/drivers/net/ethernet/raeth/raether.c	2018-10-11 10:14:19.887468880 +0000
+@@ -2421,6 +2421,15 @@
+ 		    copy_from_user(&ioctl_data, ifr->ifr_data,
+ 				   sizeof(ioctl_data));
+ 		sw_ioctl(&ioctl_data);
++
++#if 1		/* [2018.10.11 hepark] */
++		//printk ("%s: ioctl_data link: %d, speed %d, duplex %d\n",
++		//				__func__, ioctl_data.link_status, ioctl_data.speed, ioctl_data.duplex);
++		ret = copy_to_user(ifr->ifr_data, &ioctl_data, sizeof(ioctl_data));
++		if (ret < 0)
++			printk ("copy_to_user() failed\n");
++		//printk ("copy_to_user() success\n");
++#endif
+ 		break;
+ 
+ 	default:
+diff -urN a/drivers/net/ethernet/raeth/ra_ioctl.h b/drivers/net/ethernet/raeth/ra_ioctl.h
+--- a/drivers/net/ethernet/raeth/ra_ioctl.h	2018-10-11 10:10:31.427477453 +0000
++++ b/drivers/net/ethernet/raeth/ra_ioctl.h	2018-10-11 10:14:05.575469417 +0000
+@@ -151,6 +151,11 @@
+ 	unsigned int qos_table_idx;
+ 	unsigned int qos_weight;
+ 	unsigned char mac[6];
++#if 1	/* [2018.10.11 hepark] */
++	unsigned int link_status;
++	unsigned int speed;
++	unsigned int duplex;
++#endif
+ };
+ 
+ struct esw_rate {
+diff -urN a/drivers/net/ethernet/raeth/rtl8367c/rtk_hal.c b/drivers/net/ethernet/raeth/rtl8367c/rtk_hal.c
+--- a/drivers/net/ethernet/raeth/rtl8367c/rtk_hal.c	2018-10-11 10:11:17.503475724 +0000
++++ b/drivers/net/ethernet/raeth/rtl8367c/rtk_hal.c	2018-10-11 10:15:17.211466729 +0000
+@@ -364,6 +364,15 @@
+ 	} else
+ 		printk("Link Down\n");
+ 
++#if 1 /* [2018.10.11 hepark] */
++#define GET_SPEED_MBYTES(_speed_) (_speed_ == 0)? 10 : (_speed_ == 1)? 100 : 1000
++	data->link_status = (linkStatus == 1)? 1 : 0;
++	if (linkStatus == 1) {
++		data->speed = GET_SPEED_MBYTES(speed);
++		data->duplex = duplex;
++	}
++	//printk ("link_status %d, speed %d, duplex %d\n", data->link_status, data->speed, data->duplex);
++#endif
+ }
+ 
+ void rtk_hal_set_port_mirror(struct ra_switch_ioctl_data *data)
